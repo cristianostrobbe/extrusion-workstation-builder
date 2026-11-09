@@ -1,0 +1,1395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>3D Printer Workstation Builder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a drawing-sheet title block on top; spec form on the left, sticky 3D view + totals on the right; the JLCMC order table runs full width below. */
+:root{
+  --bg:#e8ecf0; --sheet:#f6f8fa; --raised:#ffffff; --ink:#16202a; --muted:#566473; --faint:#8794a1;
+  --line:#ccd4dc; --line-strong:#9ba8b5;
+  --accent:#cf4f1b; --accent-ink:#ffffff; --accent-soft:#f9e3d8;
+  --ok:#22774a; --ok-soft:#dcefe3; --warn:#9a620f; --warn-soft:#f6ead3; --bad:#b8372a; --bad-soft:#f6dcd8;
+  --view-bg:#dbe2e9; --view-grid:#b9c4cf; --ghost:#cf4f1b;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11161b; --sheet:#171d23; --raised:#1d252c; --ink:#e4e9ee; --muted:#9aa7b3; --faint:#6e7b88;
+    --line:#2b353f; --line-strong:#43505c;
+    --accent:#ff7840; --accent-ink:#1a0d06; --accent-soft:#3a2216;
+    --ok:#5cc98d; --ok-soft:#173326; --warn:#e6b05a; --warn-soft:#3a2d15; --bad:#ff8a7a; --bad-soft:#3d1d19;
+    --view-bg:#1a2129; --view-grid:#2e3842; --ghost:#ff7840;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11161b; --sheet:#171d23; --raised:#1d252c; --ink:#e4e9ee; --muted:#9aa7b3; --faint:#6e7b88;
+  --line:#2b353f; --line-strong:#43505c;
+  --accent:#ff7840; --accent-ink:#1a0d06; --accent-soft:#3a2216;
+  --ok:#5cc98d; --ok-soft:#173326; --warn:#e6b05a; --warn-soft:#3a2d15; --bad:#ff8a7a; --bad-soft:#3d1d19;
+  --view-bg:#1a2129; --view-grid:#2e3842; --ghost:#ff7840;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:14px;line-height:1.5;margin:0}
+.wrap{max-width:1480px;margin:0 auto;padding-block:20px 48px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1.1}
+h2{font-size:22px}
+h3{font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.num{font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* title block, like the corner of a drawing sheet */
+.title{display:grid;grid-template-columns:minmax(0,1fr) auto;border:1.5px solid var(--line-strong);background:var(--sheet);border-radius:var(--r);overflow:hidden}
+.title .name{padding:14px 18px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.title h1{font-size:clamp(28px,4vw,40px);font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.title p{margin:0;color:var(--muted);max-width:68ch}
+.title dl{margin:0;display:grid;grid-template-columns:repeat(2,auto);border-left:1.5px solid var(--line-strong)}
+.title dl div{padding:8px 14px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
+.title dl div:nth-child(2n){border-right:0}
+.title dl div:nth-last-child(-n+2){border-bottom:0}
+.title dt{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint)}
+.title dd{margin:0;font-family:var(--f-mono);font-size:13px}
+@media (max-width:760px){.title{grid-template-columns:1fr}.title dl{border-left:0;border-top:1.5px solid var(--line-strong)}}
+
+.app{display:grid;grid-template-columns:minmax(290px,360px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:920px){.app{grid-template-columns:minmax(0,1fr)}}
+
+/* spec form */
+.spec{display:flex;flex-direction:column;gap:14px;min-width:0}
+fieldset{margin:0;border:1px solid var(--line);border-radius:var(--r);background:var(--sheet);padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+legend{font-family:var(--f-display);font-weight:600;font-size:17px;padding:0 6px;margin-left:-6px;text-transform:uppercase;letter-spacing:.04em}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 116px;align-items:center;gap:10px}
+.row label{color:var(--ink)}
+.row small,.hint{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.unit{position:relative}
+.unit input{width:100%;padding:6px 34px 6px 8px;border:1px solid var(--line-strong);border-radius:4px;background:var(--raised);font-variant-numeric:tabular-nums;text-align:right}
+.unit::after{content:attr(data-u);position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:12px;pointer-events:none}
+select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-radius:4px;background:var(--raised)}
+.check{display:flex;gap:9px;align-items:flex-start;cursor:pointer}
+.check input{margin:3px 0 0;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line-strong);border-radius:4px;overflow:hidden}
+.seg label{position:relative;text-align:center;padding:6px 4px;cursor:pointer;border-right:1px solid var(--line);background:var(--raised);display:flex;align-items:center;justify-content:center;gap:6px}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--ink);color:var(--bg)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.swatch{width:10px;height:10px;border-radius:2px;border:1px solid var(--line-strong)}
+
+.bays{display:flex;flex-direction:column;gap:8px}
+.bay{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--raised)}
+.bay .tag{font-family:var(--f-display);font-weight:600;font-size:16px;width:2.2em;height:2.2em;display:grid;place-items:center;border:1.5px solid var(--line-strong);border-radius:50%}
+.bay .unit{max-width:120px}
+.bay .check{grid-column:2 / span 2;font-size:13px}
+.iconbtn{border:1px solid var(--line);background:transparent;border-radius:4px;width:30px;height:30px;cursor:pointer;color:var(--muted);display:grid;place-items:center}
+.iconbtn:hover{color:var(--bad);border-color:var(--bad)}
+.iconbtn:disabled{opacity:.35;cursor:not-allowed}
+.btn{border:1px solid var(--line-strong);background:var(--raised);border-radius:4px;padding:7px 12px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+
+/* view column */
+.viewcol{display:flex;flex-direction:column;gap:14px;min-width:0;position:sticky;top:calc(env(safe-area-inset-top, 0px) + 12px)}
+@media (max-width:920px){.viewcol{position:static}}
+.viewer{position:relative;border:1.5px solid var(--line-strong);border-radius:var(--r);overflow:hidden;background:var(--view-bg);height:clamp(320px,56vh,640px)}
+#viewport{position:absolute;inset:0}
+#viewport canvas{display:block;width:100%;height:100%;touch-action:none}
+.viewbar{position:absolute;left:10px;top:10px;display:flex;flex-wrap:wrap;gap:6px;z-index:2}
+.viewbar button{border:1px solid var(--line-strong);background:var(--sheet);border-radius:4px;padding:4px 9px;font-size:12px;cursor:pointer}
+.viewbar button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.viewnote{position:absolute;right:10px;bottom:8px;font-size:11.5px;color:var(--muted);z-index:2;text-align:right}
+.viewfallback{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+.dimtag{position:absolute;left:10px;bottom:8px;z-index:2;font-family:var(--f-mono);font-size:12px;background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:3px 8px}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);background:var(--sheet);overflow:hidden}
+.stat{padding:10px 14px;border-right:1px solid var(--line);min-width:0}
+.stat:last-child{border-right:0}
+.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint)}
+.stat .v{font-family:var(--f-display);font-size:28px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .s{font-size:12px;color:var(--muted)}
+.stat.total .v{color:var(--accent)}
+.stat .v.sm{font-size:clamp(18px,1.8vw,24px);padding-top:4px}
+@media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+
+.checks{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.checks li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:baseline;padding:7px 10px;border-radius:4px;background:var(--sheet);border:1px solid var(--line)}
+.pill{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:2px 7px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.info{background:var(--line);color:var(--muted)}
+
+/* order */
+.panel{border:1px solid var(--line);border-radius:var(--r);background:var(--sheet);padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panelhead{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;justify-content:space-between}
+.panelhead p{margin:4px 0 0;color:var(--muted);max-width:75ch}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--raised)}
+table{border-collapse:collapse;width:100%;min-width:860px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:600;background:var(--sheet);position:sticky;top:0}
+td.r,th.r{text-align:right}
+tbody tr:last-child td{border-bottom:0}
+tr.group td{background:var(--sheet);font-family:var(--f-display);font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:9px}
+tfoot td{border-top:1.5px solid var(--line-strong);border-bottom:0;font-weight:600}
+td .rem{color:var(--muted);font-size:12.5px}
+td .est{color:var(--faint);font-size:11px;margin-left:3px}
+.pnbtn{border:0;background:transparent;padding:0;cursor:copy;font-family:var(--f-mono);font-size:12.5px;color:var(--ink);text-align:left;border-bottom:1px dashed var(--line-strong)}
+.pnbtn:hover{color:var(--accent);border-color:var(--accent)}
+.split{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:1100px){.split{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){.split{grid-template-columns:minmax(0,1fr)}}
+.mini{width:100%;border-collapse:collapse;min-width:0}
+.mini td,.mini th{padding:5px 0;border-bottom:1px solid var(--line)}
+.mini th{background:transparent;position:static}
+.mini td.r{padding-left:10px}
+.note{color:var(--muted);font-size:12.5px;margin:0}
+ul.plain{margin:0;padding-left:18px;color:var(--ink)}
+ul.plain li{margin:2px 0}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:4px;font-size:13px;z-index:20;max-width:calc(100% - 32px)}
+textarea{width:100%;min-height:90px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line-strong);border-radius:4px;background:var(--raised);padding:8px;resize:vertical}
+details summary{cursor:pointer;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="title">
+    <div class="name">
+      <h1>3D Printer Workstation Builder</h1>
+      <p>Size a 3030 aluminium extrusion workstation bay by bay, check that your printer fits, and export the parts list in JLCMC's BOM upload format.</p>
+    </div>
+    <dl>
+      <div><dt>Profile</dt><dd>3030 EU · 8 mm slot</dd></div>
+      <div><dt>Units</dt><dd>mm · USD</dd></div>
+      <div><dt>Joints</dt><dd>TPEA brackets</dd></div>
+      <div><dt>Prices</dt><dd id="priceDate">JLCMC</dd></div>
+    </dl>
+  </header>
+
+  <div class="app">
+    <form class="spec" id="spec" autocomplete="off">
+      <fieldset>
+        <legend>Bays</legend>
+        <p class="hint">Each bay is the clear width between two posts. A tower bay rises to the full height and holds a printer on its deck.</p>
+        <div class="bays" id="bays"></div>
+        <div class="btnrow"><button type="button" class="btn" id="addBay">Add bay</button></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Frame</legend>
+        <div class="row"><label for="depth">Depth<small>outside, front to back</small></label><div class="unit" data-u="mm"><input id="depth" data-k="depth" type="number" min="200" max="1000" step="1"></div></div>
+        <div class="row"><label for="lowH">Lower cabinet height<small>post bottom to top of deck beam</small></label><div class="unit" data-u="mm"><input id="lowH" data-k="lowH" type="number" min="250" max="1800" step="1"></div></div>
+        <div class="row"><label for="totalH">Tower height<small>full post length</small></label><div class="unit" data-u="mm"><input id="totalH" data-k="totalH" type="number" min="400" max="3000" step="1"></div></div>
+        <div class="row"><label for="levels">Shelf levels<small>bottom, middle shelves and deck</small></label><select id="levels" data-k="levels"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+        <div class="row"><label for="bottomZ">Bottom beam height<small>above the post end; 60 clears the caster clamps</small></label><div class="unit" data-u="mm"><input id="bottomZ" data-k="bottomZ" type="number" min="0" max="300" step="1"></div></div>
+        <div>
+          <div class="hint" style="margin-bottom:6px">Profile finish</div>
+          <div class="seg" role="radiogroup" aria-label="Profile finish">
+            <label><input type="radio" name="finish" value="H6" data-k="finish"><span class="swatch" style="background:#c4cad1"></span>Natural</label>
+            <label><input type="radio" name="finish" value="B2" data-k="finish"><span class="swatch" style="background:#26292d"></span>Black</label>
+            <label><input type="radio" name="finish" value="W1" data-k="finish"><span class="swatch" style="background:#f1f2f3"></span>White</label>
+          </div>
+        </div>
+        <div class="row"><label for="caster">Feet</label>
+          <select id="caster" data-k="caster">
+            <option value="40">Casters Ø40, M8, 50 kg</option>
+            <option value="60">Casters Ø60, M12, 250 kg</option>
+            <option value="none">No casters</option>
+          </select></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Shelves</legend>
+        <div class="row"><label for="woodT">Panel thickness<small>plywood or MDF, bought locally</small></label>
+          <select id="woodT" data-k="woodT"><option value="9">9 mm</option><option value="12">12 mm</option><option value="15">15 mm</option><option value="18">18 mm</option></select></div>
+        <label class="check"><input type="checkbox" id="topPanels" data-k="topPanels"><span>Panel on top of each tower<small class="hint">holds the AMS or a filament dryer</small></span></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Enclosure</legend>
+        <p class="hint">Clear acrylic, cut to size by JLCMC. You drill the holes yourself.</p>
+        <label class="check"><input type="checkbox" id="towerDoors" data-k="enc.towerDoors"><span>Tower doors</span></label>
+        <label class="check"><input type="checkbox" id="lowerDoors" data-k="enc.lowerDoors"><span>Lower cabinet doors</span></label>
+        <label class="check"><input type="checkbox" id="sides" data-k="enc.sides"><span>Outer side panels, full height</span></label>
+        <label class="check"><input type="checkbox" id="lowerBacks" data-k="enc.lowerBacks"><span>Back panels, lower cabinet</span></label>
+        <label class="check"><input type="checkbox" id="towerBacks" data-k="enc.towerBacks"><span>Back panels, towers<small class="hint">printers exhaust and purge out of the back</small></span></label>
+        <div class="row"><label for="doorT">Door thickness</label><select id="doorT" data-k="enc.doorT"><option value="3">3 mm</option><option value="4">4 mm</option><option value="5">5 mm</option></select></div>
+        <div class="row"><label for="panelT">Panel thickness</label><select id="panelT" data-k="enc.panelT"><option value="3">3 mm</option><option value="4">4 mm</option><option value="5">5 mm</option><option value="6">6 mm</option></select></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Printer</legend>
+        <div class="row"><label for="preset">Model</label>
+          <select id="preset" data-k="printer.preset"></select></div>
+        <div class="row"><label for="pw">Width</label><div class="unit" data-u="mm"><input id="pw" data-k="printer.w" type="number" min="100" max="1500"></div></div>
+        <div class="row"><label for="pd">Depth</label><div class="unit" data-u="mm"><input id="pd" data-k="printer.d" type="number" min="100" max="1500"></div></div>
+        <div class="row"><label for="ph">Height</label><div class="unit" data-u="mm"><input id="ph" data-k="printer.h" type="number" min="100" max="1500"></div></div>
+        <label class="check"><input type="checkbox" id="ams" data-k="printer.ams"><span>AMS 2 Pro on the tower top<small class="hint">372 × 280 × 226 mm</small></span></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Order</legend>
+        <div class="row"><label for="spare">Spare small parts<small>rounded up to packs of 5</small></label>
+          <select id="spare" data-k="spare"><option value="0">none</option><option value="5">+5 %</option><option value="10">+10 %</option><option value="20">+20 %</option></select></div>
+        <label class="check"><input type="checkbox" id="profilesLocal" data-k="ship.profilesLocal"><span>Buy the profiles locally<small class="hint">order only hardware and acrylic from JLCMC</small></span></label>
+        <label class="check"><input type="checkbox" id="acrylicLocal" data-k="ship.acrylicLocal"><span>Buy the acrylic locally<small class="hint">cut from the DXF files by a local shop</small></span></label>
+        <div class="row"><label for="shipMethod">Shipping<small>express rates to Italy, Nov 2026</small></label>
+          <select id="shipMethod" data-k="ship.method"></select></div>
+        <details>
+          <summary>Use the shipping rate from your own JLCMC cart</summary>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <p class="note" id="calNote"></p>
+            <div class="row"><label for="calKg">Cart weight</label><div class="unit" data-u="kg"><input id="calKg" data-k="ship.calKg" type="number" min="0" step="0.01" placeholder="23.09"></div></div>
+            <div class="row"><label for="calEur">Shipping cost</label><div class="unit" data-u="€"><input id="calEur" data-k="ship.calEur" type="number" min="0" step="0.01" placeholder="176.41"></div></div>
+          </div>
+        </details>
+        <div class="btnrow">
+          <button type="button" class="btn" id="reset">Reset to twin P1S</button>
+        </div>
+        <details>
+          <summary>Save or load this design</summary>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <p class="note">The design is remembered in this browser. To move it elsewhere, copy the text below, or paste a saved design and load it.</p>
+            <textarea id="cfgText" spellcheck="false" aria-label="Design as JSON"></textarea>
+            <div class="btnrow">
+              <button type="button" class="btn" id="cfgCopy">Copy design</button>
+              <button type="button" class="btn" id="cfgLoad">Load pasted design</button>
+              <button type="button" class="btn" id="cfgSave">Save as .json</button>
+            </div>
+          </div>
+        </details>
+      </fieldset>
+    </form>
+
+    <section class="viewcol" aria-label="Preview and totals">
+      <div class="viewer">
+        <div id="viewport"></div>
+        <div class="viewbar" role="group" aria-label="Camera">
+          <button type="button" data-view="iso" aria-pressed="true">3D</button>
+          <button type="button" data-view="front" aria-pressed="false">Front</button>
+          <button type="button" data-view="side" aria-pressed="false">Side</button>
+          <button type="button" data-view="top" aria-pressed="false">Top</button>
+          <button type="button" id="refToggle" aria-pressed="true">Printer</button>
+        </div>
+        <div class="dimtag" id="dimtag"></div>
+        <div class="viewnote">Drag to orbit · scroll to zoom · right-drag to pan</div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <ul class="checks" id="checks"></ul>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="bomTitle">
+    <div class="panelhead">
+      <div>
+        <h2 id="bomTitle">JLCMC order</h2>
+        <p>Columns match JLCMC's BOM template. Upload the .xlsx under BOM / RFQ on jlcmc.com, or paste the part numbers into the cart one by one. Click a part number to copy it.</p>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="btn primary" id="dlXlsx">Download .xlsx</button>
+        <button type="button" class="btn" id="dlCsv">Download .csv</button>
+        <button type="button" class="btn" id="copyTsv">Copy table</button>
+      </div>
+    </div>
+    <div class="tablewrap"><table id="bom"></table></div>
+    <p class="note" id="bomNote"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="cadTitle">
+    <div class="panelhead">
+      <div>
+        <h2 id="cadTitle">CAD files</h2>
+        <p>The STEP model is an assembly of the 3030 profiles, floor panels and acrylic, in mm, with the post bottoms at caster height. Brackets and screws aren't modelled. The panel drawings are 1:1 DXF files, one per unique shape, sorted into doors, side panels and floor. Both come as .zip files.</p>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="btn primary" id="dlStep">Download STEP</button>
+        <button type="button" class="btn" id="dlDxf">Download panel DXFs</button>
+      </div>
+    </div>
+    <div class="tablewrap"><table id="cadFiles" style="min-width:640px"></table></div>
+  </section>
+
+  <section class="split">
+    <div class="panel"><h3>Cut list</h3><div id="cutlist"></div></div>
+    <div class="panel"><h3>Buy locally</h3><div id="local"></div></div>
+    <div class="panel"><h3>Clear space</h3><div id="clear"></div></div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/*COMPUTE-START*/
+const P = 30, ENDCAP_H = 24, PRICE_DATE = "2026-11-09";
+
+// JLCMC unit prices (USD) read from the jlcmc.com price API. Cut-to-length profiles and
+// acrylic are interpolated between sampled sizes (exact at the sampled points, within ~1% between).
+const FINISHES = {
+  H6: { label: "Natural", name: "natural sandblasted anodized", gpm: 0.815, color: 0xc2c8cf,
+    pts: [[50,.6388],[100,.6388],[150,.6695],[250,1.1026],[350,1.5339],[352,1.5429],[360,1.5772],[420,1.8515],[500,2.2196],[600,2.6346],[800,3.5044],[1000,4.3417],[1100,4.7748],[1150,5.0743],[1500,6.554],[2000,8.714],[2500,10.8235],[3000,12.9853],[4000,17.3053],[6000,25.9489]] },
+  B2: { label: "Black", name: "black anodized", gpm: 0.83, color: 0x2b2e33,
+    pts: [[50,.8193],[150,.8193],[250,1.173],[350,1.6331],[360,1.6782],[420,1.9543],[500,2.3243],[600,2.7826],[800,3.7029],[1000,4.6232],[1100,5.0834],[1150,5.3125],[1500,6.9222],[2000,9.2229],[2500,11.5219],[3000,13.8226],[4000,18.4223],[6000,27.6217]] },
+  W1: { label: "White", name: "white anodized", gpm: 0.82, color: 0xeceef0,
+    pts: [[50,.8193],[150,.8193],[250,1.1946],[350,1.6638],[360,1.7107],[420,1.9922],[500,2.3676],[600,2.8349],[800,3.7715],[1000,4.7098],[1100,5.1772],[1150,5.4118],[1500,7.0521],[2000,9.3943],[2500,11.7366],[3000,14.0807],[4000,18.7652],[6000,28.136]] },
+};
+// clear acrylic (TPNB-T) price per sheet by area in m², 1-49 pcs tier
+const PLEXI = {
+  3: [[.04,1.2109],[.2,3.9213],[.24087,4.5871],[.5,8.8133],[1.2,19.8316],[2,32.4253],[2.9768,47.6211]],
+  4: [[.04,1.4671],[.2,5.004],[.24087,5.8719],[.42848,9.9285],[.5,11.3757],[1.2,25.7179],[2,42.1101],[2.9768,61.8858]],
+  5: [[.04,1.7252],[.2,6.0831],[.218624,6.5703],[.233856,6.9709],[.5,13.9345],[1.2,31.5988],[2,51.7823],[2.9768,76.1324]],
+  6: [[.04,1.9525],[.2,7.0124],[.5,16.1143],[1.2,36.5667],[2,59.9369],[2.9768,88.1161]],
+};
+const PLEXI_TIERS = [[1,1],[50,.9746],[100,.949],[500,.932]];
+// hardware: [min qty, unit price] ladders; small = ordered with spare, rounded to packs of 5
+const HW = {
+  "TPEA-308-3030":     { d: "Die-cast corner bracket, 30 series", g: 19, small: 1, s: 10, l: [[1,.1391],[50,.1336],[100,.1282],[500,.1249]] },
+  "TPAH-N-8-M6":       { d: "M6 drop-in T-nut, 30 series", g: 3.2, small: 1, s: 11, l: [[1,.0136],[101,.012],[1001,.0106]] },
+  "EDLG-S1-M6-L12":    { d: "M6x12 button head screw", g: 3.34, small: 1, s: 12, l: [[1,.0232],[200,.0211],[500,.0197],[1000,.0176]] },
+  "EDLG-S1-M6-L16":    { d: "M6x16 button head screw", g: 4.0, small: 1, s: 13, l: [[1,.0259],[200,.0236],[500,.022],[1000,.0196]] },
+  "EDLJ-S1-M6-L16":    { d: "M6x16 countersunk socket screw DIN 7991", g: 3.79, small: 1, s: 14, l: [[1,.0259],[200,.0235],[500,.022],[1000,.0196]] },
+  "EDLJ-S1-M6-L20":    { d: "M6x20 countersunk socket screw DIN 7991", g: 4.5, small: 1, s: 14, l: [[1,.0313],[100,.0285],[200,.0266],[500,.0237]] },
+  "EDLJ-S1-M6-L25":    { d: "M6x25 countersunk socket screw DIN 7991", g: 5.1, small: 1, s: 14, l: [[1,.0335],[100,.0305],[200,.0285],[500,.0254]] },
+  "EDLJ-S1-M6-L30":    { d: "M6x30 countersunk socket screw DIN 7991", g: 6.0, small: 1, s: 14, l: [[1,.0494],[100,.0449],[200,.0419],[500,.0374]] },
+  "EPDA-S1W-B-6":      { d: "M6 flat washer", g: .739, small: 1, s: 15, l: [[1,.0055],[300,.005],[500,.0047],[2000,.0042]] },
+  "TPRE-G306-3030-M8": { d: "End cap with M8 female thread (caster mount)", g: 36.4, s: 16, l: [[1,.5847],[10,.5757],[30,.5667],[50,.5576],[100,.5486],[500,.5378]] },
+  "TPRE-G306-3030-M12":{ d: "End cap with M12 female thread (caster mount)", g: 33, s: 16, l: [[1,.4782],[10,.4692],[30,.462],[50,.4548],[100,.4476],[500,.4385]] },
+  "DEPN-W2-40-N":      { d: "Leveling caster, M8 stem, Ø40 wheel, 50 kg, H 71 mm", g: 274.9, s: 17, l: [[1,2.0193],[10,1.985],[30,1.967],[200,1.9507]] },
+  "DEPN-W2-60-N":      { d: "Leveling caster, M12 stem, Ø60 wheel, 250 kg, H 87 mm", g: 734, s: 17, l: [[1,3.3979],[10,3.3384],[30,3.3095],[200,3.2807]] },
+  "DJVP-60B":          { d: "Aluminium hinge 60 mm for profile frames, Ø5.5 countersunk holes", g: 45.7, s: 60, l: [[1,.7092],[10,.6984],[30,.6876],[50,.6731],[100,.6623],[500,.6515]] },
+  "DLSB-A5T1-H-L120":  { d: "Door handle, 120 mm", g: 77, s: 61, l: [[1,.8391],[10,.8265],[30,.8121],[50,.7976],[100,.785],[500,.7706]] },
+  "EDLJ-S1-M5-L10":    { d: "M5x10 countersunk socket screw DIN 7991", g: 1.9, small: 1, s: 62, l: [[1,.0145],[200,.0132],[500,.0123],[1000,.011]] },
+  "EDLJ-S1-M5-L12":    { d: "M5x12 countersunk socket screw DIN 7991", g: 2.145, small: 1, s: 63, l: [[1,.0149],[200,.0135],[500,.0126],[1000,.0113]] },
+  "TPAH-N-8-M5":       { d: "M5 drop-in T-nut, 30 series", g: 3.46, small: 1, s: 64, l: [[1,.0144],[101,.0128],[1001,.0113]] },
+  "EMLC-S1-N-M5":      { d: "M5 nylon insert lock nut DIN 985", g: 1.0, small: 1, s: 65, l: [[1,.0103],[300,.0094],[500,.0088],[2000,.0078]] },
+};
+const CASTERS = {
+  none: null,
+  "40": { pn: "DEPN-W2-40-N", cap: "TPRE-G306-3030-M8", h: 71, kg: 50, wheel: 40 },
+  "60": { pn: "DEPN-W2-60-N", cap: "TPRE-G306-3030-M12", h: 87, kg: 250, wheel: 60 },
+};
+const PRINTERS = {
+  p1s:    { label: "Bambu Lab P1S / P1P / X1C", w: 389, d: 389, h: 458 },
+  a1mini: { label: "Bambu Lab A1 mini", w: 347, d: 315, h: 365 },
+  h2d:    { label: "Bambu Lab H2D", w: 492, d: 514, h: 626 },
+  custom: { label: "Custom size" },
+};
+const AMS = { w: 372, d: 280, h: 226 };
+// Euros per dollar from a sample JLCMC cart (2026-11-09): €86.06 for $96.17 of quoted parts.
+const EUR_PER_USD = 0.8949;
+// Express shipping to Italy read from the same sample cart: 23.09 kg parcel = 16.45 kg of parts × 1.404 for packaging.
+// The estimate scales the cost per kg to the new parcel weight.
+const SHIP_CAL = { kg: 23.09, pack: 1.404, date: "2026-11-09", dest: "Italy" };
+const SHIP_METHODS = {
+  ups:   { label: "UPS Worldwide Express Saver", short: "UPS Saver", days: "3–5 business days", eur: 176.41 },
+  fedex: { label: "FedEx Express or FedEx DDP", short: "FedEx", days: "3–6 business days", eur: 196.35 },
+  dhl:   { label: "DHL Express or DHL DDP", short: "DHL", days: "2–4 business days", eur: 229.14 },
+  own:   { label: "Your own UPS, DHL or FedEx account", short: "own account", days: "billed by your courier", flat: 1.79 },
+};
+const DEFAULT_CFG = {
+  bays: [{ w: 420, tower: true }, { w: 420, tower: true }],
+  depth: 420, lowH: 600, totalH: 1150, levels: 3, bottomZ: 60,
+  finish: "H6", caster: "40", woodT: 12, topPanels: true, spare: 10,
+  enc: { towerDoors: false, lowerDoors: false, sides: false, lowerBacks: false, towerBacks: false, doorT: 5, panelT: 4 },
+  printer: { preset: "p1s", w: 389, d: 389, h: 458, ams: true },
+  ship: { method: "ups", profilesLocal: false, acrylicLocal: false, calKg: null, calEur: null },
+};
+
+function interp(pts, x) {
+  if (x <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    const [x1, y1] = pts[i];
+    if (x <= x1) { const [x0, y0] = pts[i - 1]; return y0 + (y1 - y0) * (x - x0) / (x1 - x0); }
+  }
+  const [xa, ya] = pts[pts.length - 2], [xb, yb] = pts[pts.length - 1];
+  return yb + (yb - ya) * (x - xb) / (xb - xa);
+}
+const tier = (ladder, q) => { let p = ladder[0][1]; for (const [min, v] of ladder) if (q >= min) p = v; return p; };
+const r4 = v => Math.round(v * 10000) / 10000;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+function normalize(raw) {
+  const c = JSON.parse(JSON.stringify(DEFAULT_CFG));
+  const num = (v, d, a, b) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? clamp(n, a, b) : d; };
+  if (raw && typeof raw === "object") {
+    if (Array.isArray(raw.bays) && raw.bays.length) c.bays = raw.bays.slice(0, 5).map(b => ({ w: num(b && b.w, 420, 150, 1500), tower: !!(b && b.tower) }));
+    c.depth = num(raw.depth, c.depth, 200, 1000);
+    c.lowH = num(raw.lowH, c.lowH, 250, 1800);
+    c.totalH = num(raw.totalH, c.totalH, 400, 3000);
+    c.levels = num(raw.levels, c.levels, 2, 6);
+    c.bottomZ = num(raw.bottomZ, c.bottomZ, 0, 300);
+    if (FINISHES[raw.finish]) c.finish = raw.finish;
+    if (raw.caster in CASTERS) c.caster = raw.caster;
+    if ([9, 12, 15, 18].includes(Number(raw.woodT))) c.woodT = Number(raw.woodT);
+    if (typeof raw.topPanels === "boolean") c.topPanels = raw.topPanels;
+    if ([0, 5, 10, 20].includes(Number(raw.spare))) c.spare = Number(raw.spare);
+    const e = raw.enc || {};
+    for (const k of ["towerDoors", "lowerDoors", "sides", "lowerBacks", "towerBacks"]) if (typeof e[k] === "boolean") c.enc[k] = e[k];
+    if ([3, 4, 5].includes(Number(e.doorT))) c.enc.doorT = Number(e.doorT);
+    if ([3, 4, 5, 6].includes(Number(e.panelT))) c.enc.panelT = Number(e.panelT);
+    const p = raw.printer || {};
+    if (p.preset in PRINTERS) c.printer.preset = p.preset;
+    c.printer.w = num(p.w, c.printer.w, 100, 1500); c.printer.d = num(p.d, c.printer.d, 100, 1500); c.printer.h = num(p.h, c.printer.h, 100, 1500);
+    if (typeof p.ams === "boolean") c.printer.ams = p.ams;
+    const s = raw.ship || {};
+    if (s.method in SHIP_METHODS) c.ship.method = s.method;
+    if (typeof s.profilesLocal === "boolean") c.ship.profilesLocal = s.profilesLocal;
+    if (typeof s.acrylicLocal === "boolean") c.ship.acrylicLocal = s.acrylicLocal;
+    const pos = v => { const x = Number(v); return v !== null && v !== "" && Number.isFinite(x) && x > 0 ? Math.round(x * 100) / 100 : null; };
+    c.ship.calKg = pos(s.calKg); c.ship.calEur = pos(s.calEur);
+  }
+  // geometry rules: the bottom beam must sit below the deck; towers need some height above the deck
+  c.bottomZ = Math.min(c.bottomZ, c.lowH - 2 * P - 40);
+  c.bottomZ = Math.max(0, c.bottomZ);
+  if (c.bays.some(b => b.tower)) c.totalH = Math.max(c.totalH, c.lowH + 2 * P + 60);
+  const pr = PRINTERS[c.printer.preset];
+  if (pr && pr.w) Object.assign(c.printer, { w: pr.w, d: pr.d, h: pr.h });
+  return c;
+}
+
+// Fixing holes for a fixed acrylic plate: along each post's slot (x = post centre line, every ~300 mm)
+// and along each beam's slot (y = beam centre line, every ~200 mm between posts).
+function plateHoles(w, h, postXs, rowYs) {
+  const out = [], m2 = P / 2;
+  for (const x of postXs) {
+    const k = Math.max(2, Math.ceil((h - P) / 300) + 1);
+    for (let j = 0; j < k; j++) out.push([x, m2 + j * (h - P) / (k - 1)]);
+  }
+  const bounds = [0, ...postXs, w].sort((a, b) => a - b);
+  for (const y of rowYs) for (let j = 0; j < bounds.length - 1; j++) {
+    const a = bounds[j], b = bounds[j + 1];
+    if (b - a < 60) continue;
+    const m = Math.max(1, Math.ceil((b - a) / 200) - 1);
+    for (let q = 1; q <= m; q++) out.push([a + q * (b - a) / (m + 1), y]);
+  }
+  return out.map(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10]);
+}
+
+function compute(cfg) {
+  const bays = cfg.bays, n = bays.length, D = cfg.depth, lowH = cfg.lowH, L = cfg.levels, bz = cfg.bottomZ;
+  const anyTower = bays.some(b => b.tower);
+  const H = anyTower ? cfg.totalH : lowH;
+  const fin = FINISHES[cfg.finish];
+  const caster = CASTERS[cfg.caster];
+  const base = caster ? caster.h + ENDCAP_H : 0;
+  const xs = [0];
+  for (let i = 0; i < n; i++) xs.push(xs[i] + P + bays[i].w);
+  const W = xs[n] + P;
+  const colTall = xs.map((_, c) => (c > 0 && bays[c - 1].tower) || (c < n && bays[c].tower));
+  const colH = colTall.map(t => (t ? H : lowH));
+  const deckZ = lowH - P;
+  const zs = [];
+  for (let k = 0; k < L; k++) zs.push(Math.round(bz + k * (deckZ - bz) / (L - 1)));
+  const topZ = H - P;
+
+  // members: every beam sits between two posts; posts run the full column height
+  const members = [];
+  xs.forEach((x, c) => { for (const y of [0, D - P]) members.push({ role: "post", len: colH[c], axis: "z", x, y, z: 0 }); });
+  bays.forEach((b, i) => { for (const z of zs) for (const y of [0, D - P]) members.push({ role: "X beam", len: b.w, axis: "x", x: xs[i] + P, y, z }); });
+  xs.forEach(x => { for (const z of zs) members.push({ role: "Y beam", len: D - 2 * P, axis: "y", x, y: P, z }); });
+  const topCols = new Set();
+  bays.forEach((b, i) => {
+    if (!b.tower) return;
+    for (const y of [0, D - P]) members.push({ role: "X beam", len: b.w, axis: "x", x: xs[i] + P, y, z: topZ });
+    topCols.add(i); topCols.add(i + 1);
+  });
+  [...topCols].sort((a, b) => a - b).forEach(c => members.push({ role: "Y beam", len: D - 2 * P, axis: "y", x: xs[c], y: P, z: topZ }));
+  const posts = members.filter(m => m.role === "post").length;
+  const beams = members.length - posts;
+  const brackets = 2 * beams;
+
+  // shelf panels: flush with the outer faces, meet on the centre line of shared posts
+  const has = (i, key) => i >= 0 && i < n && (key !== "top" || (bays[i].tower && cfg.topPanels));
+  const ext = (i, side, key) => { const c = side < 0 ? i : i + 1; return (c === 0 || c === n || !has(i + side, key)) ? P : P / 2; };
+  const levelInfo = zs.map((z, k) => ({ key: "L" + k, z, label: k === 0 ? "bottom" : k === L - 1 ? "deck" : (L > 3 ? `shelf ${k}` : "middle shelf") }));
+  const panels = [];
+  bays.forEach((b, i) => {
+    const lv = levelInfo.slice();
+    if (has(i, "top")) lv.push({ key: "top", z: topZ, label: "tower top" });
+    for (const l of lv) {
+      const eL = ext(i, -1, l.key), eR = ext(i, 1, l.key), w = b.w + eL + eR;
+      // screw holes on the beam slot centre lines: front and back beams, plus the Y beam on each full-width side
+      const holes = [[w / 2, P / 2], [w / 2, D - P / 2]];
+      if (eL === P) holes.push([P / 2, D / 2]);
+      if (eR === P) holes.push([w - P / 2, D / 2]);
+      // a corner is notched only where its post continues up through the panel
+      const nL = colH[i] > l.z + P, nR = colH[i + 1] > l.z + P;
+      panels.push({ bay: i, label: l.label, z: l.z, x0: xs[i] + P - eL, w, d: D, eL, eR, nL, nR, holes, screws: holes.length });
+    }
+  });
+  const woodScrewL = [16, 20, 25, 30].find(l => l >= cfg.woodT + 8) || 30;
+
+  // acrylic enclosure. Plate coordinates: x across the plate (from the left as seen from the front,
+  // from the front edge for side panels), y up from the plate's bottom edge.
+  const e = cfg.enc, plexi = [];
+  const tw = k => k >= 0 && k < n && bays[k].tower;
+  bays.forEach((b, i) => {
+    const hingeLeft = i < n / 2;
+    if (e.towerDoors && b.tower) plexi.push({ use: `tower door, bay ${i + 1}`, kind: "door", door: true, hingeLeft, t: e.doorT, w: b.w + P - 2, h: H - lowH, face: "front", x0: xs[i] + P / 2 + 1, z0: lowH });
+    if (e.lowerDoors) plexi.push({ use: `lower door, bay ${i + 1}`, kind: "door", door: true, hingeLeft, t: e.doorT, w: b.w + P - 2, h: lowH - bz - P, face: "front", x0: xs[i] + P / 2 + 1, z0: bz + P });
+  });
+  const levelRows = (z0, top) => zs.filter(z => z >= z0 && z + P <= top).map(z => z - z0 + P / 2);
+  if (e.sides) {
+    for (const [side, c] of [["left", 0], ["right", n]]) {
+      const h = colH[c] - bz, rows = levelRows(bz, colH[c]);
+      if (colTall[c]) rows.push(topZ - bz + P / 2);
+      plexi.push({ use: `${side} side`, kind: "side", t: e.panelT, w: D, h, face: side, x0: side === "left" ? 0 : W, z0: bz, posts: [P / 2, D - P / 2], rows });
+    }
+  }
+  bays.forEach((b, i) => {
+    if (e.lowerBacks) {
+      const eL = ext(i, -1, "L0"), eR = ext(i, 1, "L0"), w = b.w + eL + eR;
+      plexi.push({ use: `lower back, bay ${i + 1}`, kind: "back", t: e.panelT, w, h: lowH - bz, face: "back", x0: xs[i] + P - eL, z0: bz,
+        posts: [eL === P && P / 2, eR === P && w - P / 2].filter(v => v !== false), rows: levelRows(bz, lowH) });
+    }
+    if (e.towerBacks && b.tower) {
+      const eL = (i === 0 || !tw(i - 1)) ? P : P / 2, eR = (i === n - 1 || !tw(i + 1)) ? P : P / 2, w = b.w + eL + eR;
+      plexi.push({ use: `tower back, bay ${i + 1}`, kind: "back", t: e.panelT, w, h: H - lowH, face: "back", x0: xs[i] + P - eL, z0: lowH,
+        posts: [eL === P && P / 2, eR === P && w - P / 2].filter(v => v !== false), rows: [H - lowH - P / 2] });
+    }
+  });
+  for (const p of plexi) {
+    p.a = Math.max(p.w, p.h); p.b = Math.min(p.w, p.h);
+    p.pn = `TPNB-T-T${p.t}-L${p.a}-W${p.b}`;
+    if (p.door) {
+      p.hinges = p.h > 800 ? 3 : 2;
+      p.hingeYs = p.hinges === 2 ? [80, p.h - 80] : [80, p.h / 2, p.h - 80];
+    } else {
+      p.holes = plateHoles(p.w, p.h, p.posts, p.rows);
+      p.fix = p.holes.length;
+    }
+  }
+
+  // collect parts by JLCMC model number
+  const items = new Map();
+  const add = (pn, q, use, meta) => {
+    if (q <= 0) return;
+    let it = items.get(pn);
+    if (!it) { it = Object.assign({ pn, needed: 0, uses: new Map() }, meta); items.set(pn, it); }
+    it.needed += q; it.uses.set(use, (it.uses.get(use) || 0) + q);
+  };
+  for (const m of members) add(`TXCK-${cfg.finish}-3030-L${m.len}`, 1, m.role, { kind: "profile", len: m.len });
+  add("TPEA-308-3030", brackets, "beam ends", { kind: "hw" });
+  add("EDLG-S1-M6-L12", 2 * brackets, "brackets", { kind: "hw" });
+  add("EPDA-S1W-B-6", 2 * brackets, "brackets", { kind: "hw" });
+  add("TPAH-N-8-M6", 2 * brackets, "brackets", { kind: "hw" });
+  if (caster) {
+    add(caster.cap, posts, "post ends", { kind: "hw" });
+    add(caster.pn, posts, "post ends", { kind: "hw" });
+    add("EDLG-S1-M6-L12", 2 * posts, "end caps", { kind: "hw" });
+    add("TPAH-N-8-M6", 2 * posts, "end caps", { kind: "hw" });
+  }
+  const shelfScrews = panels.reduce((s, p) => s + p.screws, 0);
+  add(`EDLJ-S1-M6-L${woodScrewL}`, shelfScrews, "shelf panels", { kind: "hw" });
+  add("TPAH-N-8-M6", shelfScrews, "shelf panels", { kind: "hw" });
+  for (const p of plexi) {
+    add(p.pn, 1, p.use, { kind: "plexi", t: p.t, a: p.a, b: p.b });
+    if (p.door) {
+      const h = p.hinges;
+      add("DJVP-60B", h, "doors", { kind: "hw", enc: 1 });
+      add("DLSB-A5T1-H-L120", 1, "doors", { kind: "hw", enc: 1 });
+      add("EDLJ-S1-M5-L10", 2 * h, "hinges to frame", { kind: "hw", enc: 1 });
+      add("TPAH-N-8-M5", 2 * h, "hinges to frame", { kind: "hw", enc: 1 });
+      add("EDLJ-S1-M5-L12", 2 * h, "hinges to doors", { kind: "hw", enc: 1 });
+      add("EMLC-S1-N-M5", 2 * h, "hinges to doors", { kind: "hw", enc: 1 });
+    } else {
+      add(p.t <= 4 ? "EDLG-S1-M6-L12" : "EDLG-S1-M6-L16", p.fix, "acrylic panels", { kind: "hw" });
+      add("EPDA-S1W-B-6", p.fix, "acrylic panels", { kind: "hw" });
+      add("TPAH-N-8-M6", p.fix, "acrylic panels", { kind: "hw" });
+    }
+  }
+
+  // order rows
+  const rows = [];
+  for (const it of items.values()) {
+    if (it.kind === "profile" && cfg.ship.profilesLocal) continue;
+    if (it.kind === "plexi" && cfg.ship.acrylicLocal) continue;
+    let qty = it.needed, unit, grams, desc, remark, exact = true, sort, section;
+    const uses = [...it.uses.entries()];
+    if (it.kind === "profile") {
+      unit = interp(fin.pts, it.len); exact = fin.pts.some(p => p[0] === it.len);
+      grams = it.len * fin.gpm; sort = 1e6 - it.len; section = "frame";
+      desc = `Aluminum extrusion EU 30 series 3030, 8 mm slot, ${fin.name}, cut to ${it.len} mm`;
+      remark = uses.map(([u, q]) => `${q}x ${u}`).join(" + ") + "; ends square, no machining";
+    } else if (it.kind === "plexi") {
+      const area = it.a * it.b / 1e6;
+      unit = interp(PLEXI[it.t], area) * tier(PLEXI_TIERS, qty);
+      exact = PLEXI[it.t].some(p => Math.abs(p[0] - area) < 1e-6);
+      grams = it.a * it.b * it.t * 1.19e-3; sort = 2e6 + 1e5 - area * 1e4; section = "enclosure";
+      desc = `Acrylic sheet, clear, ${it.t} mm, cut to ${it.a} x ${it.b} mm`;
+      remark = uses.map(([u, q]) => (q > 1 ? `${q}x ` : "") + u).join(", ") + "; drill holes yourself";
+    } else {
+      const h = HW[it.pn];
+      if (h.small) qty = Math.ceil(it.needed * (100 + cfg.spare) / 500 - 1e-9) * 5;
+      unit = tier(h.l, qty); grams = h.g; desc = h.d; sort = 1.5e6 + (h.s >= 60 ? 1e6 : 0) + h.s; section = h.s >= 60 ? "enclosure" : "frame";
+      const useTxt = uses.length > 1 ? ` (${uses.map(([u, q]) => `${u} ${q}`).join(", ")})` : `, ${uses[0][0]}`;
+      remark = `needed ${it.needed}${useTxt}` + (qty > it.needed ? `, +${qty - it.needed} spare` : "");
+    }
+    unit = r4(unit);
+    rows.push({ pn: it.pn, desc, qty, needed: it.needed, unit, total: unit * qty, grams: grams * qty, remark, exact, kind: it.kind, section, sort });
+  }
+  rows.sort((a, b) => a.sort - b.sort);
+  rows.forEach((r, i) => { r.cust = "WS-" + String(i + 1).padStart(2, "0"); });
+
+  const total = rows.reduce((s, r) => s + r.total, 0);
+  const grams = rows.reduce((s, r) => s + r.grams, 0);
+  const sub = { profiles: 0, hardware: 0, enclosure: 0 };
+  for (const r of rows) sub[r.kind === "profile" ? "profiles" : r.section === "enclosure" ? "enclosure" : "hardware"] += r.total;
+  const woodKg = panels.reduce((s, p) => s + p.w * p.d * cfg.woodT, 0) * 0.6e-6;
+
+  // shipping: cost per kg of the selected method, scaled to this parcel (parts × packaging factor)
+  const sm = SHIP_METHODS[cfg.ship.method];
+  const calibrated = !!(cfg.ship.calKg && cfg.ship.calEur && sm.eur);
+  const rate = sm.eur ? (calibrated ? cfg.ship.calEur / cfg.ship.calKg : sm.eur / SHIP_CAL.kg) : 0;
+  const shipKg = grams / 1000 * SHIP_CAL.pack;
+  const shipEur = sm.flat != null ? sm.flat : rate * shipKg;
+  const profileM = members.reduce((s, m) => s + m.len, 0) / 1000;
+  const profileUsd = [...items.values()].filter(it => it.kind === "profile").reduce((s, it) => s + interp(fin.pts, it.len) * it.needed, 0);
+  const hwKg = rows.filter(r => r.kind !== "profile").reduce((s, r) => s + r.grams, 0) / 1000 * SHIP_CAL.pack;
+  const acrRows = rows.filter(r => r.kind === "plexi");
+  const acrKg = acrRows.reduce((s, r) => s + r.grams, 0) / 1000 * SHIP_CAL.pack, acrUsd = acrRows.reduce((s, r) => s + r.total, 0);
+  const ship = { method: sm, calibrated, rate, kg: shipKg, eur: shipEur, partsEur: total * EUR_PER_USD, totalEur: total * EUR_PER_USD + shipEur,
+    profileM, profileUsd, hwOnlyEur: sm.flat != null ? sm.flat : rate * hwKg, hwKg };
+
+  // heights
+  const deckTop = base + lowH + cfg.woodT;
+  const topSurface = base + H + (anyTower && cfg.topPanels ? cfg.woodT : 0);
+  const frameTop = base + Math.max(...colH);
+  const overallH = anyTower ? Math.max(frameTop, topSurface) : base + lowH + cfg.woodT;
+  const towerClear = H - P - lowH - cfg.woodT;
+  const amsOn = anyTower && cfg.printer.ams && cfg.topPanels;
+  const withAms = amsOn ? topSurface + AMS.h : null;
+  const compartments = [];
+  for (let k = 0; k < L - 1; k++) compartments.push({ label: `${levelInfo[k].label} → ${levelInfo[k + 1].label}`, h: zs[k + 1] - (zs[k] + P + cfg.woodT) });
+
+  // checks
+  const checks = [];
+  const lens = members.map(m => m.len);
+  if (Math.min(...lens) < 50 || Math.max(...lens) > 6000) checks.push({ s: "bad", t: "A profile is outside JLCMC's 50–6000 mm cut range." });
+  for (const p of plexi) if (p.a > 2440 || p.b > 1220 || p.b < 100) { checks.push({ s: "bad", t: `Acrylic ${p.use} (${p.a} × ${p.b}) is outside the 100–2440 × 100–1220 mm sheet range.` }); break; }
+  const pr = cfg.printer;
+  if (anyTower) {
+    bays.forEach((b, i) => {
+      if (!b.tower) return;
+      const mw = b.w - pr.w, md = D - pr.d, mh = towerClear - pr.h;
+      if (mw < 0 || md < 0 || mh < 0) {
+        const why = [mw < 0 && `${-mw} mm too wide`, md < 0 && `${-md} mm too deep`, mh < 0 && `${-mh} mm too tall`].filter(Boolean).join(", ");
+        checks.push({ s: "bad", t: `Printer does not fit bay ${i + 1}: ${why}.` });
+      } else if (mh < 30) checks.push({ s: "warn", t: `Bay ${i + 1}: printer fits with ${mw} mm side and ${mh} mm head room. The lid can't open in place; slide it out to open.` });
+      else checks.push({ s: "ok", t: `Bay ${i + 1}: printer fits with ${mw} mm side and ${mh} mm head room.` });
+    });
+    if (cfg.printer.ams && !cfg.topPanels) checks.push({ s: "warn", t: "The AMS needs a panel on the tower top. Turn on “Panel on top of each tower”." });
+    if (amsOn && pr.d > 0 && AMS.w > Math.min(...bays.filter(b => b.tower).map(b => b.w + P))) checks.push({ s: "warn", t: "The AMS 2 Pro is wider than a tower top. It will overhang the posts." });
+    if (e.towerBacks) checks.push({ s: "warn", t: "Closed tower backs block the printer's rear exhaust and purge chute. Leave a vent or keep them open." });
+  } else checks.push({ s: "info", t: "No tower bays. This builds a low cabinet only." });
+  compartments.forEach(c => { if (c.h < 80) checks.push({ s: "warn", t: `Shelf ${c.label} has only ${c.h} mm of clear height.` }); });
+  if (caster) {
+    const cap = caster.kg * posts;
+    const load = grams / 1000 + (cfg.ship.profilesLocal ? profileM * fin.gpm : 0) + woodKg + bays.filter(b => b.tower).length * 15 + 40;
+    checks.push({ s: load > cap * 0.6 ? "warn" : "ok", t: `${posts} casters carry ${cap} kg in total. Estimated load with printers and filament is about ${Math.round(load)} kg.` });
+  }
+  if (e.sides && (e.towerDoors || e.lowerDoors)) checks.push({ s: "info", t: "Doors are overlay doors on the front face. Hinges go on the outer posts." });
+  if (cfg.ship.profilesLocal) {
+    checks.push({ s: "info", t: `Profiles left out of the JLCMC order. Buy ${members.length} pieces (${profileM.toFixed(2)} m) of 3030 locally, cut to the list below. Any EU 30-series profile with an 8 mm slot fits these brackets and T-nuts.` });
+  } else if (sm.eur) {
+    const save = shipEur - ship.hwOnlyEur, budget = save + profileUsd * EUR_PER_USD;
+    checks.push({ s: "save", t: `The aluminium is ${Math.round(100 * (shipKg - ship.hwKg) / shipKg)} % of the parcel. Without the profiles, shipping drops from about €${Math.round(shipEur)} to €${Math.round(ship.hwOnlyEur)}. Buying the ${profileM.toFixed(1)} m of profile locally saves money if it costs less than about €${Math.round(budget)} delivered.` });
+  }
+  if (cfg.ship.acrylicLocal && plexi.length) {
+    checks.push({ s: "info", t: `Acrylic left out of the JLCMC order. Have the ${plexi.length} sheets cut locally from the DXF files below.` });
+  } else if (acrRows.length && sm.eur) {
+    const save = rate * acrKg;
+    checks.push({ s: "save", t: `The acrylic adds about ${acrKg.toFixed(0)} kg and €${Math.round(save)} of shipping. Cutting it locally saves money if the ${plexi.length} sheets cost less than about €${Math.round(save + acrUsd * EUR_PER_USD)} delivered.` });
+  }
+
+  const cuts = new Map();
+  for (const m of members) { const k = m.len; const c = cuts.get(k) || { len: k, n: 0, roles: new Map() }; c.n++; c.roles.set(m.role, (c.roles.get(m.role) || 0) + 1); cuts.set(k, c); }
+
+  return {
+    geo: { xs, W, D, H, lowH, colH, zs, topZ, base, members, panels, plexi, anyTower, woodT: cfg.woodT, caster, bays },
+    rows, total, grams, woodKg, sub, ship, cuts: [...cuts.values()].sort((a, b) => b.len - a.len),
+    panels, plexi, woodScrewL, shelfScrews, brackets, posts, beams,
+    dims: { W, D, overallH, frameTop, deckTop, topSurface, towerClear, withAms, compartments },
+    checks,
+  };
+}
+/*COMPUTE-END*/
+
+/*CAD-START*/
+const CLEAR = 1, R_IN = 3, R_OUT = 5, HOLE_D = 6.5, CSK_D = 12.5, PLEXI_HOLE_D = 7;
+
+// Simplified EU 30-series section in [0,30]²: 4 T-slots (8.2 mm opening, 2.2 mm lip) with tapered cavities.
+function profileSection() {
+  const h = P / 2, slot = [[4.1, h], [4.1, 12.8], [8.25, 12.8], [3.0, 6.5], [-3.0, 6.5], [-8.25, 12.8], [-4.1, 12.8], [-4.1, h]];
+  const pts = [];
+  for (let k = 0; k < 4; k++) {
+    const rot = ([x, y]) => { let a = x, b = y; for (let r = 0; r < k; r++) [a, b] = [-b, a]; return [a + h, b + h]; };
+    pts.push(rot([h, h]), ...slot.map(rot));
+  }
+  return pts;
+}
+// Shelf panel outline (CCW, origin at the front-left corner): rectangular notches around the posts.
+function woodOutline(p) {
+  const aL = p.eL + CLEAR, aR = p.eR + CLEAR, b = P + CLEAR, w = p.w, D = p.d;
+  const right = p.nR ? [[w - aR, 0], [w - aR, b], [w, b], [w, D - b], [w - aR, D - b], [w - aR, D]] : [[w, 0], [w, D]];
+  const left = p.nL ? [[aL, D], [aL, D - b], [0, D - b], [0, b], [aL, b], [aL, 0]] : [[0, D], [0, 0]];
+  return [...right, ...left];
+}
+const rect = (w, h) => [[0, 0], [w, 0], [w, h], [0, h]];
+
+// ---- DXF (R12 entities, mm) ----
+function dxfText(ents) {
+  const n = v => (Math.round(v * 1000) / 1000).toFixed(3);
+  const o = ["0", "SECTION", "2", "HEADER", "9", "$INSUNITS", "70", "4", "0", "ENDSEC", "0", "SECTION", "2", "ENTITIES"];
+  for (const e of ents) {
+    o.push("0", e.t === "L" ? "LINE" : e.t === "C" ? "CIRCLE" : "ARC", "8", e.layer);
+    if (e.t === "L") o.push("10", n(e.x1), "20", n(e.y1), "11", n(e.x2), "21", n(e.y2));
+    else { o.push("10", n(e.cx), "20", n(e.cy), "40", n(e.r)); if (e.t === "A") o.push("50", n(e.a1), "51", n(e.a2)); }
+  }
+  o.push("0", "ENDSEC", "0", "EOF");
+  return o.join("\n") + "\n";
+}
+// Closed outline with every 90° corner rounded: convex corners rOut, concave corners rIn (pts CCW).
+function outlineEnts(pts, rOut, rIn, layer) {
+  const n = pts.length, T = [], ents = [];
+  for (let i = 0; i < n; i++) {
+    const V = pts[i], A = pts[(i + n - 1) % n], B = pts[(i + 1) % n];
+    const u = unit([A[0] - V[0], A[1] - V[1]]), v = unit([B[0] - V[0], B[1] - V[1]]);
+    const convex = (V[0] - A[0]) * (B[1] - V[1]) - (V[1] - A[1]) * (B[0] - V[0]) > 0;
+    const r = convex ? rOut : rIn;
+    T.push({ convex, r, t1: [V[0] + u[0] * r, V[1] + u[1] * r], t2: [V[0] + v[0] * r, V[1] + v[1] * r], c: [V[0] + (u[0] + v[0]) * r, V[1] + (u[1] + v[1]) * r] });
+  }
+  const ang = (c, p) => ((Math.atan2(p[1] - c[1], p[0] - c[0]) * 180 / Math.PI) + 360) % 360;
+  for (let i = 0; i < n; i++) {
+    const a = T[i], b = T[(i + 1) % n];
+    if (a.r > 0) ents.push(a.convex ? { t: "A", layer, cx: a.c[0], cy: a.c[1], r: a.r, a1: ang(a.c, a.t1), a2: ang(a.c, a.t2) }
+                                    : { t: "A", layer, cx: a.c[0], cy: a.c[1], r: a.r, a1: ang(a.c, a.t2), a2: ang(a.c, a.t1) });
+    ents.push({ t: "L", layer, x1: a.t2[0], y1: a.t2[1], x2: b.t1[0], y2: b.t1[1] });
+  }
+  return ents;
+}
+function unit([x, y]) { const l = Math.hypot(x, y) || 1; return [x / l, y / l]; }
+const circ = (layer, x, y, d) => ({ t: "C", layer, cx: x, cy: y, r: d / 2 });
+const line = (layer, x1, y1, x2, y2) => ({ t: "L", layer, x1, y1, x2, y2 });
+
+// All panel drawings, one file per unique shape, grouped into floor/, side_panels/ and doors/.
+function panelFiles(res, cfg) {
+  const groups = { floor: new Map(), side_panels: new Map(), doors: new Map() };
+  const put = (folder, key, make, use) => {
+    const g = groups[folder]; let f = g.get(key);
+    if (!f) { f = Object.assign(make(), { uses: [] }); g.set(key, f); }
+    f.uses.push(use);
+  };
+  for (const p of res.panels) {
+    put("floor", `${p.w}|${p.d}|${p.eL}|${p.eR}|${p.nL}|${p.nR}|${JSON.stringify(p.holes)}`, () => {
+      const ents = outlineEnts(woodOutline(p), R_OUT, R_IN, "CUT");
+      for (const [x, y] of p.holes) { ents.push(circ("CUT", x, y, HOLE_D)); ents.push(circ("CSK90_D12.5_TOP", x, y, CSK_D)); }
+      return { stem: "floor", size: `${p.w}x${p.d}`, t: cfg.woodT, ents, holes: p.holes.length, material: `${cfg.woodT} mm plywood` };
+    }, `bay ${p.bay + 1} ${p.label}`);
+  }
+  for (const p of res.plexi) {
+    if (p.door) {
+      put("doors", `${p.w}|${p.h}|${p.t}|${p.hingeLeft}|${p.hinges}`, () => {
+        const ents = outlineEnts(rect(p.w, p.h), 0, 0, "OUTLINE");
+        const hx0 = p.hingeLeft ? 0 : p.w - 28, hx1 = hx0 + 28;
+        for (const y of p.hingeYs) {
+          ents.push(line("MARK_HINGE", hx0, y - 30, hx1, y - 30), line("MARK_HINGE", hx1, y - 30, hx1, y + 30), line("MARK_HINGE", hx1, y + 30, hx0, y + 30), line("MARK_HINGE", hx0, y + 30, hx0, y - 30));
+          ents.push(line("MARK_HINGE", hx0, y, hx1, y));
+        }
+        const gx = p.hingeLeft ? p.w - 25 : 25, gy = p.h / 2;
+        ents.push(line("MARK_HANDLE", gx, gy - 60, gx, gy + 60), line("MARK_HANDLE", gx - 5, gy - 60, gx + 5, gy - 60), line("MARK_HANDLE", gx - 5, gy + 60, gx + 5, gy + 60));
+        return { stem: "door", size: `${p.w}x${p.h}`, t: p.t, ents, holes: 0, material: `${p.t} mm clear acrylic`, note: `hinges on the ${p.hingeLeft ? "left" : "right"}` };
+      }, p.use);
+    } else {
+      put("side_panels", `${p.kind}|${p.w}|${p.h}|${p.t}|${JSON.stringify(p.holes)}`, () => {
+        const ents = outlineEnts(rect(p.w, p.h), 0, 0, "OUTLINE");
+        for (const [x, y] of p.holes) ents.push(circ("DRILL_D7", x, y, PLEXI_HOLE_D));
+        return { stem: p.kind, size: `${p.w}x${p.h}`, t: p.t, ents, holes: p.holes.length, material: `${p.t} mm clear acrylic` };
+      }, p.use);
+    }
+  }
+  const files = [];
+  for (const [folder, g] of Object.entries(groups)) {
+    let i = 0;
+    for (const f of g.values()) {
+      const letter = String.fromCharCode(65 + i++);
+      f.folder = folder; f.qty = f.uses.length;
+      f.name = `${folder}/${f.stem}_${letter}_${f.size}_t${f.t}_qty${f.qty}.dxf`;
+      f.text = dxfText(f.ents);
+      files.push(f);
+    }
+  }
+  return files;
+}
+
+function dxfReadme(files, cfg) {
+  const L = [
+    "Panel drawings from 3D Printer Workstation Builder. Units: mm, 1:1.",
+    "",
+    "floor/        Shelf, deck and tower-top panels, " + cfg.woodT + " mm plywood. Drawn from above, front edge at the bottom (y = 0).",
+    "              CUT                 outline and through holes, Ø" + HOLE_D + " for M6",
+    "              CSK90_D12.5_TOP     90° countersink to Ø" + CSK_D + " on the top face (DIN 7991 M6 screws)",
+    "              Notches clear each post by " + CLEAR + " mm. Inside corners R" + R_IN + " (6 mm end mill), outside corners R" + R_OUT + ".",
+    "side_panels/  Fixed acrylic side and back panels. JLCMC cuts the rectangle; drill the holes yourself.",
+    "              Side panels are drawn from outside with the front edge at x = 0. Back panels are drawn as seen from the front.",
+    "              OUTLINE             sheet size",
+    "              DRILL_D7            Ø" + PLEXI_HOLE_D + " holes on the profile slot centre lines (M6x12 or M6x16 + washer + T-nut)",
+    "doors/        Overlay doors, drawn from the front.",
+    "              OUTLINE             sheet size",
+    "              MARK_HINGE          hinge positions (60 mm hinges). Place the hinge and drill through its holes, Ø5.5.",
+    "              MARK_HANDLE         handle position (120 mm). Drill through the handle's holes.",
+    "",
+    "Files:",
+  ];
+  for (const f of files) L.push(`  ${f.name.padEnd(52)} ${String(f.qty).padStart(2)} pcs  ${f.material}${f.holes ? `, ${f.holes} holes` : ""}${f.note ? `, ${f.note}` : ""}  <- ${f.uses.join("; ")}`);
+  return L.join("\n") + "\n";
+}
+
+// ---- STEP AP214 assembly: one product per unique part, instanced with placements ----
+function stepText(res, cfg) {
+  const out = []; let id = 0;
+  const E = s => { out.push(`#${++id}=${s};`); return `#${id}`; };
+  const f = v => { if (Math.abs(v) < 1e-9) v = 0; let s = (Math.round(v * 1e4) / 1e4).toString(); if (s.includes("e")) s = v.toFixed(6); return s.includes(".") ? s : s + "."; };
+  const str = s => `'${String(s).replace(/'/g, "''")}'`;
+  const pt = p => E(`CARTESIAN_POINT('',(${p.map(f).join(",")}))`);
+  const dir = d => E(`DIRECTION('',(${d.map(f).join(",")}))`);
+  const ax = (o, z, x) => E(`AXIS2_PLACEMENT_3D('',${pt(o)},${dir(z)},${dir(x)})`);
+
+  const appCtx = E("APPLICATION_CONTEXT('core data for automotive mechanical design processes')");
+  E(`APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,${appCtx})`);
+  const prodCtx = E(`PRODUCT_CONTEXT('',${appCtx},'mechanical')`);
+  const pdCtx = E(`PRODUCT_DEFINITION_CONTEXT('part definition',${appCtx},'design')`);
+  const uLen = E("(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.))");
+  const uAng = E("(NAMED_UNIT(*)PLANE_ANGLE_UNIT()SI_UNIT($,.RADIAN.))");
+  const uSol = E("(NAMED_UNIT(*)SI_UNIT($,.STERADIAN.)SOLID_ANGLE_UNIT())");
+  const unc = E(`UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-07),${uLen},'distance_accuracy_value','confusion accuracy')`);
+  const ctx = E(`(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((${unc}))GLOBAL_UNIT_ASSIGNED_CONTEXT((${uLen},${uAng},${uSol}))REPRESENTATION_CONTEXT('Context #1','3D Context with UNIT and UNCERTAINTY'))`);
+
+  const product = name => {
+    const p = E(`PRODUCT(${str(name)},${str(name)},'',(${prodCtx}))`);
+    E(`PRODUCT_RELATED_PRODUCT_CATEGORY('part',$,(${p}))`);
+    const pf = E(`PRODUCT_DEFINITION_FORMATION('','',${p})`);
+    const pd = E(`PRODUCT_DEFINITION('design','',${pf},${pdCtx})`);
+    const pds = E(`PRODUCT_DEFINITION_SHAPE('','',${pd})`);
+    return { pd, pds };
+  };
+  const styles = {};
+  const style = rgb => styles[rgb] || (styles[rgb] = (() => {
+    const c = E(`COLOUR_RGB('',${rgb.map(f).join(",")})`);
+    const fas = E(`FILL_AREA_STYLE('',(${E(`FILL_AREA_STYLE_COLOUR('',${c})`)}))`);
+    const sss = E(`SURFACE_SIDE_STYLE('',(${E(`SURFACE_STYLE_FILL_AREA(${fas})`)}))`);
+    return E(`PRESENTATION_STYLE_ASSIGNMENT((${E(`SURFACE_STYLE_USAGE(.BOTH.,${sss})`)}))`);
+  })());
+  const styled = [];
+
+  // planar prism: CCW polygon in local XY, extruded 0..len along local Z
+  function prism(name, poly, len) {
+    let pts = poly.slice();
+    const area = pts.reduce((s, p, i) => { const q = pts[(i + 1) % pts.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0);
+    if (area < 0) pts.reverse();
+    const n = pts.length, V = [];
+    for (const z of [0, len]) for (const [x, y] of pts) { const xyz = [x, y, z], cp = pt(xyz); V.push({ xyz, cp, vp: E(`VERTEX_POINT('',${cp})`) }); }
+    const edges = new Map();
+    const oe = (a, b) => {
+      const k = a < b ? a + "-" + b : b + "-" + a;
+      let ed = edges.get(k);
+      if (!ed) {
+        const [p, q] = a < b ? [a, b] : [b, a];
+        const d = V[q].xyz.map((v, i) => v - V[p].xyz[i]), l = Math.hypot(...d);
+        const ln = E(`LINE('',${V[p].cp},${E(`VECTOR('',${dir(d.map(v => v / l))},${f(l)})`)})`);
+        ed = { ec: E(`EDGE_CURVE('',${V[p].vp},${V[q].vp},${ln},.T.)`), from: p };
+        edges.set(k, ed);
+      }
+      return E(`ORIENTED_EDGE('',*,*,${ed.ec},${ed.from === a ? ".T." : ".F."})`);
+    };
+    const face = (loop, o, z, x) => {
+      const oes = loop.map((v, i) => oe(v, loop[(i + 1) % loop.length]));
+      const bound = E(`FACE_OUTER_BOUND('',${E(`EDGE_LOOP('',(${oes.join(",")}))`)},.T.)`);
+      return E(`ADVANCED_FACE('',(${bound}),${E(`PLANE('',${ax(o, z, x)})`)},.T.)`);
+    };
+    const faces = [];
+    faces.push(face([...Array(n).keys()].reverse(), V[0].xyz, [0, 0, -1], [1, 0, 0]));
+    faces.push(face([...Array(n).keys()].map(i => i + n), V[n].xyz, [0, 0, 1], [1, 0, 0]));
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, a = V[i].xyz, b = V[j].xyz;
+      const d = unit([b[0] - a[0], b[1] - a[1]]);
+      faces.push(face([i, j, j + n, i + n], a, [d[1], -d[0], 0], [d[0], d[1], 0]));
+    }
+    return E(`MANIFOLD_SOLID_BREP(${str(name)},${E(`CLOSED_SHELL('',(${faces.join(",")}))`)})`);
+  }
+
+  const parts = new Map();
+  function part(key, name, poly, len, rgb) {
+    if (parts.has(key)) return parts.get(key);
+    const pr = product(name);
+    const ax0 = ax([0, 0, 0], [0, 0, 1], [1, 0, 0]);
+    const brep = prism(name, poly, len);
+    const sr = E(`ADVANCED_BREP_SHAPE_REPRESENTATION(${str(name)},(${brep},${ax0}),${ctx})`);
+    E(`SHAPE_DEFINITION_REPRESENTATION(${pr.pds},${sr})`);
+    styled.push(E(`STYLED_ITEM('color',(${style(rgb)}),${brep})`));
+    const o = { pd: pr.pd, sr, ax0 };
+    parts.set(key, o);
+    return o;
+  }
+  const assemblies = [];
+  function assembly(name) { const pr = product(name); const a = { name, pd: pr.pd, pds: pr.pds, ax0: ax([0, 0, 0], [0, 0, 1], [1, 0, 0]), items: [], sr: null }; a.items.push(a.ax0); assemblies.push(a); return a; }
+  const inst = [];
+  function place(parent, child, name, o, z, x) { const a = ax(o, z, x); parent.items.push(a); inst.push({ parent, child, name, a }); }
+
+  const g = res.geo, base = g.base;
+  const fin = { H6: [.78, .8, .83], B2: [.16, .17, .19], W1: [.93, .94, .95] }[cfg.finish];
+  const WOOD = [.79, .64, .46], ACR = [.74, .88, .95];
+  const root = assembly("Workstation");
+  const subs = {};
+  const sub = name => subs[name] || (subs[name] = assembly(name));
+  const section = profileSection();
+  const cnt = {};
+  const label = s => { cnt[s] = (cnt[s] || 0) + 1; return `${s} ${cnt[s]}`; };
+  for (const m of g.members) {
+    const pp = part("prof" + m.len, `3030 profile L${m.len}`, section, m.len, fin);
+    const o = [m.x, m.y, base + m.z];
+    const fr = sub("Frame 3030");
+    if (m.axis === "z") place(fr, pp, label(m.role), o, [0, 0, 1], [1, 0, 0]);
+    else if (m.axis === "x") place(fr, pp, label(m.role), o, [1, 0, 0], [0, 1, 0]);
+    else place(fr, pp, label(m.role), o, [0, 1, 0], [0, 0, 1]);
+  }
+  for (const p of g.panels) {
+    const pp = part(`wood|${p.w}|${p.d}|${p.eL}|${p.eR}|${p.nL}|${p.nR}`, `Floor panel ${p.w}x${p.d}x${g.woodT}${p.nL || p.nR ? "" : " plain"}`, woodOutline(p), g.woodT, WOOD);
+    place(sub("Floor panels"), pp, `bay ${p.bay + 1} ${p.label}`, [p.x0, 0, base + p.z + P], [0, 0, 1], [1, 0, 0]);
+  }
+  for (const p of g.plexi) {
+    const pp = part(`acr|${p.w}|${p.h}|${p.t}`, `${p.door ? "Door" : "Panel"} ${p.w}x${p.h}x${p.t} acrylic`, rect(p.w, p.h), p.t, ACR);
+    const z = base + p.z0, s = sub(p.door ? "Doors" : "Side panels");
+    if (p.face === "front") place(s, pp, p.use, [p.x0, -1, z], [0, -1, 0], [1, 0, 0]);
+    else if (p.face === "back") place(s, pp, p.use, [p.x0, g.D + 1 + p.t, z], [0, -1, 0], [1, 0, 0]);
+    else if (p.face === "left") place(s, pp, p.use, [-1, g.D, z], [-1, 0, 0], [0, -1, 0]);
+    else place(s, pp, p.use, [g.W + 1, 0, z], [1, 0, 0], [0, 1, 0]);
+  }
+  for (const s of Object.values(subs)) place(root, s, s.name, [0, 0, 0], [0, 0, 1], [1, 0, 0]);
+  for (const a of assemblies) {
+    a.sr = E(`SHAPE_REPRESENTATION(${str(a.name)},(${a.items.join(",")}),${ctx})`);
+    E(`SHAPE_DEFINITION_REPRESENTATION(${a.pds},${a.sr})`);
+  }
+  inst.forEach((it, k) => {
+    const idt = E(`ITEM_DEFINED_TRANSFORMATION('','',${it.child.ax0},${it.a})`);
+    const rr = E(`(REPRESENTATION_RELATIONSHIP('','',${it.child.sr},${it.parent.sr})REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(${idt})SHAPE_REPRESENTATION_RELATIONSHIP())`);
+    const nauo = E(`NEXT_ASSEMBLY_USAGE_OCCURRENCE(${str("NAUO" + (k + 1))},${str(it.name)},'',${it.parent.pd},${it.child.pd},$)`);
+    E(`CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(${rr},${E(`PRODUCT_DEFINITION_SHAPE('','',${nauo})`)})`);
+  });
+  E(`MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',(${styled.join(",")}),${ctx})`);
+
+  return ["ISO-10303-21;", "HEADER;",
+    "FILE_DESCRIPTION(('3D printer workstation, 3030 frame with panels'),'2;1');",
+    `FILE_NAME('workstation.step','${new Date().toISOString().slice(0, 19)}',(''),(''),'3D Printer Workstation Builder','','');`,
+    "FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));", "ENDSEC;", "DATA;", ...out, "ENDSEC;", "END-ISO-10303-21;"].join("\n") + "\n";
+}
+/*CAD-END*/
+
+// ---------- page state ----------
+const STORE_KEY = "ws-builder-config-v1";
+let cfg;
+try { cfg = normalize(JSON.parse(localStorage.getItem(STORE_KEY) || "null")); } catch (_) { cfg = normalize(null); }
+let res = compute(cfg);
+let showRef = true;
+const $ = s => document.querySelector(s);
+const fmt$ = v => "$" + v.toFixed(2);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (_) {} }
+
+function getPath(o, path) { return path.split(".").reduce((a, k) => a && a[k], o); }
+function setPath(o, path, v) { const ks = path.split("."); let a = o; ks.slice(0, -1).forEach(k => a = a[k]); a[ks[ks.length - 1]] = v; }
+
+// ---------- form ----------
+const presetSel = $("#preset");
+for (const [k, p] of Object.entries(PRINTERS)) { const o = document.createElement("option"); o.value = k; o.textContent = p.label; presetSel.appendChild(o); }
+for (const [k, m] of Object.entries(SHIP_METHODS)) { const o = document.createElement("option"); o.value = k; o.textContent = `${m.label}, ${m.days}`; $("#shipMethod").appendChild(o); }
+
+function renderBays() {
+  const box = $("#bays"); box.textContent = "";
+  cfg.bays.forEach((b, i) => {
+    const row = document.createElement("div"); row.className = "bay";
+    row.innerHTML = `<div class="tag" aria-hidden="true">${i + 1}</div>
+      <div class="unit" data-u="mm"><input type="number" id="bayw${i}" min="150" max="1500" step="1" value="${b.w}" aria-label="Bay ${i + 1} clear width"></div>
+      <button type="button" class="iconbtn" aria-label="Remove bay ${i + 1}" ${cfg.bays.length < 2 ? "disabled" : ""}>
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button>
+      <label class="check"><input type="checkbox" id="bayt${i}" ${b.tower ? "checked" : ""}><span>Printer tower</span></label>`;
+    const [wIn, rm, tIn] = [row.querySelector("input[type=number]"), row.querySelector("button"), row.querySelector("input[type=checkbox]")];
+    wIn.addEventListener("input", () => { cfg.bays[i].w = Number(wIn.value); schedule(); });
+    wIn.addEventListener("change", () => { commit(); });
+    tIn.addEventListener("change", () => { cfg.bays[i].tower = tIn.checked; commit(); });
+    rm.addEventListener("click", () => { cfg.bays.splice(i, 1); commit(true); });
+    box.appendChild(row);
+  });
+  $("#addBay").disabled = cfg.bays.length >= 5;
+}
+
+function fillForm() {
+  document.querySelectorAll("[data-k]").forEach(el => {
+    const v = getPath(cfg, el.dataset.k);
+    if (el.type === "checkbox") el.checked = !!v;
+    else if (el.type === "radio") el.checked = el.value === String(v);
+    else if (document.activeElement !== el) el.value = v;
+  });
+  const custom = cfg.printer.preset === "custom";
+  for (const id of ["pw", "pd", "ph"]) $("#" + id).disabled = !custom;
+  $("#totalH").disabled = !cfg.bays.some(b => b.tower);
+  const sm = SHIP_METHODS[cfg.ship.method];
+  $("#calKg").disabled = $("#calEur").disabled = !sm.eur;
+  $("#calNote").textContent = sm.eur
+    ? `The estimate uses ${sm.short} at €${sm.eur.toFixed(2)} for a ${SHIP_CAL.kg} kg parcel to ${SHIP_CAL.dest} (a sample JLCMC cart, ${SHIP_CAL.date}). For another country or a newer price, enter the weight and shipping cost shown in your own JLCMC cart.`
+    : "With your own courier account JLCMC charges a €1.79 handling fee and your courier bills you for the transport.";
+  $("#cfgText").value = JSON.stringify(cfg, null, 1);
+}
+
+document.querySelectorAll("[data-k]").forEach(el => {
+  const read = () => {
+    const k = el.dataset.k;
+    let v = el.type === "checkbox" ? el.checked : el.value;
+    if (el.type === "number" || ["levels", "woodT", "spare", "enc.doorT", "enc.panelT"].includes(k)) v = Number(v);
+    if (k === "printer.preset" && v === "custom") { /* keep current numbers as a starting point */ }
+    setPath(cfg, k, v);
+  };
+  if (el.type === "number") {
+    el.addEventListener("input", () => { read(); schedule(); });
+    el.addEventListener("change", () => { read(); commit(); });
+  } else el.addEventListener("change", () => { read(); commit(); });
+});
+$("#addBay").addEventListener("click", () => { const last = cfg.bays[cfg.bays.length - 1]; cfg.bays.push({ w: last ? last.w : 420, tower: false }); commit(true); });
+$("#reset").addEventListener("click", () => { cfg = normalize(null); commit(true); toast("Reset to the twin-tower P1S design"); });
+$("#spec").addEventListener("submit", e => e.preventDefault());
+
+let timer = null;
+function schedule() { clearTimeout(timer); timer = setTimeout(() => update(false), 160); }
+function commit(rebuildBays) { clearTimeout(timer); cfg = normalize(cfg); save(); if (rebuildBays) renderBays(); else syncBayInputs(); fillForm(); update(true); }
+function syncBayInputs() { cfg.bays.forEach((b, i) => { const el = $("#bayw" + i); if (el && document.activeElement !== el) el.value = b.w; }); }
+
+// ---------- outputs ----------
+function update(full) {
+  const live = normalize(cfg);
+  res = compute(live);
+  renderStats(); renderChecks(); renderBom(); renderSide(); renderCad(live);
+  buildModel(live);
+}
+
+const FOLDER_LABEL = { doors: "Doors", side_panels: "Side panels", floor: "Floor" };
+function renderCad(live) {
+  const files = panelFiles(res, live);
+  let body = "";
+  for (const folder of ["doors", "side_panels", "floor"]) {
+    const fs = files.filter(f => f.folder === folder);
+    body += `<tr class="group"><td colspan="4">${FOLDER_LABEL[folder]} <span class="rem" style="text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400">· ${folder}/</span></td></tr>`;
+    body += fs.length ? fs.map(f => `<tr><td class="mono">${esc(f.name.split("/")[1])}</td><td class="r num">${f.qty}</td><td>${esc(f.material)}${f.holes ? `, ${f.holes} holes` : ""}${f.note ? `, ${esc(f.note)}` : ""}</td><td><span class="rem">${esc(f.uses.join("; "))}</span></td></tr>`).join("")
+      : `<tr><td colspan="4"><span class="rem">${folder === "floor" ? "No floor panels." : "None selected. Turn them on under Enclosure."}</span></td></tr>`;
+  }
+  $("#cadFiles").innerHTML = `<thead><tr><th>File</th><th class="r">Qty</th><th>Material</th><th>Used for</th></tr></thead><tbody>${body}</tbody>`;
+}
+
+function renderStats() {
+  const d = res.dims;
+  const s = res.sub, sh = res.ship;
+  const parts = [];
+  if (s.profiles) parts.push(`profiles ${fmt$(s.profiles)}`);
+  parts.push(`hardware ${fmt$(s.hardware)}`);
+  if (s.enclosure) parts.push(`acrylic & doors ${fmt$(s.enclosure)}`);
+  const eur = v => "€" + Math.round(v);
+  $("#stats").innerHTML = `
+    <div class="stat"><div class="k">JLCMC parts</div><div class="v">${fmt$(res.total)}</div><div class="s">≈ €${sh.partsEur.toFixed(2)} · ${parts.join(" · ")}</div></div>
+    <div class="stat"><div class="k">Shipping, est.</div><div class="v">${sh.method.flat != null ? "€" + sh.method.flat.toFixed(2) : "≈ " + eur(sh.eur)}</div><div class="s">${esc(sh.method.short)} · ${sh.kg.toFixed(1)} kg parcel${sh.calibrated ? " · your rate" : ""}</div></div>
+    <div class="stat total"><div class="k">Delivered</div><div class="v">≈ ${eur(sh.totalEur)}</div><div class="s">parts + shipping, before import VAT${res.ship.method.flat != null ? " and courier bill" : ""}</div></div>
+    <div class="stat"><div class="k">Size, mm</div><div class="v sm">${d.W} × ${d.D} × ${d.overallH}</div><div class="s">${d.withAms ? `${d.withAms} tall with the AMS` : "width × depth × height"}</div></div>`;
+  $("#dimtag").textContent = `${d.W} × ${d.D} × ${d.overallH} mm`;
+}
+
+function renderChecks() {
+  const lab = { ok: "Fits", warn: "Check", bad: "Problem", info: "Note", save: "Save" };
+  $("#checks").innerHTML = res.checks.map(c => `<li><span class="pill ${c.s === "save" ? "ok" : c.s}">${lab[c.s]}</span><span>${esc(c.t)}</span></li>`).join("");
+}
+
+function renderBom() {
+  const head = `<thead><tr><th>Customer #</th><th>JLCMC part #</th><th>Description</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Total</th><th>Remark</th></tr></thead>`;
+  let body = "", lastGroup = "";
+  const groupOf = r => r.kind === "profile" ? "Profiles, cut to length" : r.section === "enclosure" || r.kind === "plexi" ? "Enclosure" : "Hardware";
+  for (const r of res.rows) {
+    const g = groupOf(r);
+    if (g !== lastGroup) { body += `<tr class="group"><td colspan="7">${g}</td></tr>`; lastGroup = g; }
+    body += `<tr><td class="mono">${r.cust}</td><td><button type="button" class="pnbtn" data-pn="${esc(r.pn)}" title="Copy part number">${esc(r.pn)}</button></td>
+      <td>${esc(r.desc)}</td><td class="r num">${r.qty}</td>
+      <td class="r num">${r.unit.toFixed(4)}${r.exact ? "" : '<span class="est" title="Interpolated between JLCMC price points">≈</span>'}</td>
+      <td class="r num">${r.total.toFixed(2)}</td><td><span class="rem">${esc(r.remark)}</span></td></tr>`;
+  }
+  const foot = `<tfoot><tr><td colspan="3">Parts total, about ${(res.grams / 1000).toFixed(1)} kg</td><td class="r num">${res.rows.reduce((s, r) => s + r.qty, 0)}</td><td></td><td class="r num">${fmt$(res.total)}</td><td><span class="rem">excl. shipping and VAT</span></td></tr></tfoot>`;
+  $("#bom").innerHTML = head + "<tbody>" + body + "</tbody>" + foot;
+  const est = res.rows.some(r => !r.exact);
+  const sh = res.ship;
+  $("#bomNote").textContent = (cfg.ship.profilesLocal ? "Profiles are left out of this order; buy them locally from the cut list. " : "") +
+    (cfg.ship.acrylicLocal && res.plexi.length ? "Acrylic sheets are left out; have them cut locally from the DXF files. " : "") +
+    `Unit prices from the jlcmc.com price API on ${PRICE_DATE}, at the quantity tier for the quantity shown.` +
+    (est ? " ≈ marks cut-to-length prices interpolated between sampled sizes; JLCMC's quote is final." : "") +
+    (sh.method.eur ? ` Shipping is scaled from the ${sh.method.short} price per kg of a sample cart to ${SHIP_CAL.dest}, so treat it as ±20 %; small parcels cost more per kg, and other countries differ.` : "");
+}
+
+function renderSide() {
+  $("#cutlist").innerHTML = `<table class="mini"><tbody>${res.cuts.map(c => `<tr><td class="num">${c.n} ×</td><td class="num">${c.len} mm</td><td><span class="rem">${[...c.roles.entries()].map(([r, q]) => `${q} ${r}${q > 1 ? "s" : ""}`).join(", ")}</span></td></tr>`).join("")}</tbody></table>
+    <p class="note">${cfg.ship.profilesLocal ? "<strong>Buy these locally.</strong> " : ""}${res.posts} posts, ${res.beams} beams, ${res.brackets} brackets. Total ${(res.cuts.reduce((s, c) => s + c.n * c.len, 0) / 1000).toFixed(2)} m of 3030. No drilling or tapping of the aluminium.</p>`;
+  const g = new Map();
+  for (const p of res.panels) { const k = `${p.w} × ${p.d}`; const v = g.get(k) || { n: 0, uses: new Set() }; v.n++; v.uses.add(p.label); g.set(k, v); }
+  const area = res.panels.reduce((s, p) => s + p.w * p.d, 0) / 1e6;
+  $("#local").innerHTML = `<table class="mini"><tbody>${[...g.entries()].map(([k, v]) => `<tr><td class="num">${v.n} ×</td><td class="num">${k} × ${cfg.woodT} mm</td><td><span class="rem">${[...v.uses].join(", ")}</span></td></tr>`).join("")}</tbody></table>
+    <ul class="plain">
+      <li>${area.toFixed(2)} m² of ${cfg.woodT} mm plywood, notched 1 mm around each post.</li>
+      <li>${res.shelfScrews} countersunk M6×${res.woodScrewL} screws hold the panels. Countersink the holes 90° to Ø12.5.</li>
+      ${res.plexi.some(p => p.door) ? "<li>Magnetic catches: 2 small 10×3 mm magnets per door, in printed holders. JLCMC doesn't sell catches.</li><li>Handle screws: check the thread in the handle's datasheet.</li>" : ""}
+    </ul>`;
+  const d = res.dims;
+  $("#clear").innerHTML = `<table class="mini"><tbody>
+      ${res.geo.anyTower ? `<tr><td>Tower, above the deck panel</td><td class="r num">${d.towerClear} mm</td></tr>` : ""}
+      ${d.compartments.slice().reverse().map(c => `<tr><td>${esc(c.label.replace(/^(.*) → (.*)$/, "between $1 and $2"))}</td><td class="r num">${c.h} mm</td></tr>`).join("")}
+      <tr><td>Deck surface above floor</td><td class="r num">${d.deckTop} mm</td></tr>
+      ${res.geo.anyTower && cfg.topPanels ? `<tr><td>Tower top above floor</td><td class="r num">${d.topSurface} mm</td></tr>` : ""}
+      ${d.withAms ? `<tr><td>Top of the AMS above floor</td><td class="r num">${d.withAms} mm</td></tr>` : ""}
+    </tbody></table>
+    <p class="note">Brackets sit under every beam end and take about 35 mm of height within 35 mm of each post.</p>`;
+}
+
+// ---------- exports ----------
+const HEADER = ["*Customer Part #", "JLCMC Part #", "*Product Description", "*Quantity", "Remark"];
+const exportRows = () => res.rows.map(r => [r.cust, r.pn, r.desc, r.qty, r.remark]);
+function csvText() { return [HEADER, ...exportRows()].map(r => r.map(v => typeof v === "number" ? v : `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n") + "\r\n"; }
+function xmlEsc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c])); }
+async function xlsxBlob() {
+  const col = i => "ABCDE"[i];
+  const rowsXml = [HEADER, ...exportRows()].map((vals, r) => `<row r="${r + 1}">` + vals.map((v, c) => typeof v === "number"
+    ? `<c r="${col(c)}${r + 1}"><v>${v}</v></c>`
+    : `<c r="${col(c)}${r + 1}" t="inlineStr"><is><t>${xmlEsc(v)}</t></is></c>`).join("") + "</row>").join("");
+  const sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="14" customWidth="1"/><col min="2" max="2" width="26" customWidth="1"/><col min="3" max="3" width="90" customWidth="1"/><col min="4" max="4" width="10" customWidth="1"/><col min="5" max="5" width="60" customWidth="1"/></cols><sheetData>' + rowsXml + "</sheetData></worksheet>";
+  const z = new JSZip();
+  z.file("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
+  z.file("_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  z.file("xl/workbook.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  z.file("xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
+  z.file("xl/worksheets/sheet1.xml", sheet);
+  return z.generateAsync({ type: "blob", compression: "DEFLATE" });
+}
+
+// Inside claude.ai the page offers files through the downloads capability; opened as a local file it uses a normal download.
+let downloadsNs = null, downloadsChecked = false;
+const inClaude = !!(window.claude && typeof window.claude.use === "function");
+if (inClaude) window.claude.use("downloads").then(ns => { downloadsNs = ns; downloadsChecked = true; refreshDl(); }).catch(() => { downloadsChecked = true; refreshDl(); });
+function refreshDl() {
+  const off = inClaude && downloadsChecked && !downloadsNs;
+  for (const id of ["dlXlsx", "dlCsv", "cfgSave", "dlStep", "dlDxf"]) { const b = $("#" + id); b.disabled = off; b.title = off ? "Downloads aren't available in this view. Use Copy table instead." : ""; }
+}
+async function offerFile(filename, data) {
+  if (inClaude) {
+    if (!downloadsNs) { toast(downloadsChecked ? "Downloads aren't available here. Use Copy table instead." : "Getting the download ready. Try again in a moment."); return; }
+    try { await downloadsNs.save({ filename, data }); toast(`Saved ${filename}`); }
+    catch (e) { toast(e && e.code === "declined" ? "Download cancelled" : `Couldn't save ${filename}. Use Copy table instead.`); }
+    return;
+  }
+  const blob = data instanceof Blob ? data : new Blob([data], { type: "text/plain" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const stamp = () => { const d = res.dims; return `workstation_${cfg.bays.length}bay_${d.W}x${d.D}x${d.overallH}`; };
+$("#dlXlsx").addEventListener("click", async () => {
+  if (!window.JSZip) { toast("The spreadsheet library didn't load. Use .csv instead."); return; }
+  offerFile(`jlcmc_bom_${stamp()}.xlsx`, await xlsxBlob());
+});
+$("#dlCsv").addEventListener("click", () => offerFile(`jlcmc_bom_${stamp()}.csv`, csvText()));
+$("#cfgSave").addEventListener("click", () => offerFile(`${stamp()}.json`, JSON.stringify(cfg, null, 2)));
+// .step and .dxf aren't on the viewer's download allowlist, so both ship inside a .zip
+$("#dlStep").addEventListener("click", async () => {
+  if (!window.JSZip) { toast("The zip library didn't load. Reload the page and try again."); return; }
+  const live = normalize(cfg), z = new JSZip();
+  z.file(`${stamp()}.step`, stepText(compute(live), live));
+  offerFile(`${stamp()}_step.zip`, await z.generateAsync({ type: "blob", compression: "DEFLATE" }));
+});
+$("#dlDxf").addEventListener("click", async () => {
+  if (!window.JSZip) { toast("The zip library didn't load. Reload the page and try again."); return; }
+  const live = normalize(cfg), r = compute(live), files = panelFiles(r, live), z = new JSZip();
+  for (const f of files) z.file(f.name, f.text);
+  z.file("README.txt", dxfReadme(files, live));
+  offerFile(`${stamp()}_panels_dxf.zip`, await z.generateAsync({ type: "blob", compression: "DEFLATE" }));
+});
+
+function copyText(text, okMsg, fallbackEl) {
+  const done = () => toast(okMsg);
+  const fail = () => { if (fallbackEl) { fallbackEl.focus(); fallbackEl.select(); toast("Press ⌘C / Ctrl+C to copy"); } else toast("Copy failed. Select the text and copy it by hand."); };
+  try { navigator.clipboard.writeText(text).then(done, fail); } catch (_) { fail(); }
+}
+$("#copyTsv").addEventListener("click", () => copyText([HEADER, ...exportRows()].map(r => r.join("\t")).join("\n"), "Table copied. Paste it into a spreadsheet."));
+$("#bom").addEventListener("click", e => { const b = e.target.closest(".pnbtn"); if (b) copyText(b.dataset.pn, `Copied ${b.dataset.pn}`); });
+$("#cfgCopy").addEventListener("click", () => copyText($("#cfgText").value, "Design copied", $("#cfgText")));
+$("#cfgLoad").addEventListener("click", () => {
+  try { cfg = normalize(JSON.parse($("#cfgText").value)); commit(true); toast("Design loaded"); }
+  catch (_) { toast("That text isn't a saved design. Paste the JSON from “Copy design”."); }
+});
+
+let toastTimer;
+function toast(msg) {
+  let t = $(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+// ---------- 3D view ----------
+let renderer, scene, camera, controls, root, grid, lastSize = null, viewName = "iso";
+const mats = {};
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888";
+
+function initViewer() {
+  const el = $("#viewport");
+  if (!window.THREE || !THREE.OrbitControls) { el.innerHTML = '<div class="viewfallback">The 3D preview needs three.js, which didn\'t load. The parts list below still works.</div>'; return; }
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+  } catch (_) { el.innerHTML = '<div class="viewfallback">3D preview isn\'t available in this browser. The parts list below still works.</div>'; return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  el.appendChild(renderer.domElement);
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(32, 1, 10, 60000);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.addEventListener("change", render);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a3, 0.85));
+  const d1 = new THREE.DirectionalLight(0xffffff, 0.75); d1.position.set(1800, 3200, 2600); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0xffffff, 0.3); d2.position.set(-2500, 1200, -800); scene.add(d2);
+  root = new THREE.Group(); scene.add(root);
+  new ResizeObserver(resize).observe(el);
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  (mq.addEventListener ? mq.addEventListener("change", applyTheme) : mq.addListener(applyTheme));
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  applyTheme();
+}
+function resize() {
+  if (!renderer) return;
+  const el = $("#viewport"); const w = el.clientWidth, h = el.clientHeight; if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); render();
+}
+function render() { if (renderer) renderer.render(scene, camera); }
+function applyTheme() {
+  if (!renderer) return;
+  scene.background = new THREE.Color(cssVar("--view-bg"));
+  if (mats.ghost) mats.ghost.color.set(cssVar("--ghost"));
+  if (grid) { grid.material.color.set(cssVar("--view-grid")); }
+  render();
+}
+function mat(key, make) { return mats[key] || (mats[key] = make()); }
+
+function buildModel(c) {
+  if (!renderer) return;
+  const g = res.geo, base = g.base;
+  for (const ch of [...root.children]) { root.remove(ch); ch.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  const alu = mat("alu" + c.finish, () => new THREE.MeshStandardMaterial({ color: FINISHES[c.finish].color, metalness: c.finish === "H6" ? .55 : .25, roughness: .42 }));
+  const edge = mat("edge", () => new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: .22 }));
+  const wood = mat("wood", () => new THREE.MeshStandardMaterial({ color: 0xc9a476, roughness: .85 }));
+  const dark = mat("dark", () => new THREE.MeshStandardMaterial({ color: 0x2a2f35, roughness: .6, metalness: .2 }));
+  const rubber = mat("rubber", () => new THREE.MeshStandardMaterial({ color: 0x3b3f44, roughness: .9 }));
+  const acrylic = mat("acrylic", () => new THREE.MeshStandardMaterial({ color: 0xbfe3f2, transparent: true, opacity: .22, roughness: .05, metalness: 0, depthWrite: false }));
+  const ghost = mat("ghost", () => new THREE.LineBasicMaterial({ color: new THREE.Color(cssVar("--ghost")) }));
+  // model coords: x right, y depth (0 = front), z up  ->  three: x, z up as y, -y as z
+  const box = (sx, sy, sz, x, y, z, m, outline) => {
+    const geo = new THREE.BoxGeometry(sx, sz, sy);
+    const mesh = new THREE.Mesh(geo, m); mesh.position.set(x + sx / 2, z + sz / 2, -(y + sy / 2)); root.add(mesh);
+    if (outline) { const l = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edge); l.position.copy(mesh.position); root.add(l); }
+    return mesh;
+  };
+  const wire = (sx, sy, sz, x, y, z) => {
+    const l = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(sx, sz, sy)), ghost);
+    l.position.set(x + sx / 2, z + sz / 2, -(y + sy / 2)); root.add(l);
+  };
+  for (const m of g.members) {
+    if (m.axis === "z") box(P, P, m.len, m.x, m.y, base + m.z, alu, true);
+    else if (m.axis === "x") box(m.len, P, P, m.x, m.y, base + m.z, alu, true);
+    else box(P, m.len, P, m.x, m.y, base + m.z, alu, true);
+  }
+  for (const p of g.panels) box(p.w, p.d, g.woodT, p.x0, 0, base + p.z + P, wood, true);
+  if (g.caster) {
+    const r = g.caster.wheel / 2;
+    for (const m of g.members) if (m.axis === "z") {
+      box(P, P, ENDCAP_H, m.x, m.y, base - ENDCAP_H, dark, false);
+      const stemH = base - ENDCAP_H - 2 * r;
+      if (stemH > 0) box(14, 14, stemH, m.x + P / 2 - 7, m.y + P / 2 - 7, 2 * r, dark, false);
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 18, 24), rubber);
+      wheel.rotation.z = Math.PI / 2; wheel.position.set(m.x + P / 2, r, -(m.y + P / 2)); root.add(wheel);
+    }
+  }
+  for (const p of g.plexi) {
+    const z = base + p.z0;
+    if (p.face === "front") {
+      box(p.w, p.t, p.h, p.x0, -p.t - 1, z, acrylic, true);
+      const hx = p.hingeLeft ? p.x0 + p.w - 40 : p.x0 + 28;
+      box(12, 22, 120, hx, -p.t - 23, z + p.h / 2 - 60, dark, false);
+    } else if (p.face === "back") box(p.w, p.t, p.h, p.x0, g.D + 1, z, acrylic, true);
+    else if (p.face === "left") box(p.t, p.w, p.h, -p.t - 1, 0, z, acrylic, true);
+    else box(p.t, p.w, p.h, g.W + 1, 0, z, acrylic, true);
+  }
+  if (showRef && g.anyTower) {
+    const pr = c.printer;
+    g.bays.forEach((b, i) => {
+      if (!b.tower) return;
+      const cx = g.xs[i] + P + b.w / 2;
+      wire(pr.w, pr.d, pr.h, cx - pr.w / 2, (g.D - pr.d) / 2, base + g.lowH + g.woodT);
+      if (pr.ams && c.topPanels) wire(AMS.w, AMS.d, AMS.h, cx - AMS.w / 2, (g.D - AMS.d) / 2, base + g.H + g.woodT);
+    });
+  }
+  // floor grid sized to the model
+  if (grid) { scene.remove(grid); grid.geometry.dispose(); }
+  const span = Math.ceil(Math.max(g.W, g.D) * 1.6 / 100) * 100 + 400;
+  grid = new THREE.GridHelper(span, span / 100, 0x000000, 0x000000);
+  grid.material.color.set(cssVar("--view-grid")); grid.position.set(g.W / 2, 0, -g.D / 2); scene.add(grid);
+
+  const size = [g.W, g.D, res.dims.withAms || res.dims.overallH];
+  const changed = !lastSize || size.some((v, i) => Math.abs(v - lastSize[i]) / lastSize[i] > 0.03);
+  lastSize = size;
+  if (changed) fit(null);
+  else render();
+}
+
+function fit(view) {
+  if (!renderer) return;
+  const b = new THREE.Box3().setFromObject(root);
+  const ctr = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3());
+  const dirs = { iso: [1.05, .62, 1.35], front: [0, .12, 1], side: [1, .12, 0], top: [0, 1, .0001] };
+  let dir;
+  if (view) { viewName = view; dir = new THREE.Vector3(...dirs[view]).normalize(); }
+  else if (camera.position.lengthSq() > 0 && controls.target) dir = camera.position.clone().sub(controls.target).normalize();
+  if (!dir || !isFinite(dir.x) || dir.lengthSq() < .5) dir = new THREE.Vector3(...dirs[viewName]).normalize();
+  const radius = sz.length() / 2;
+  const vfov = camera.fov * Math.PI / 180;
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+  const dist = radius / Math.sin(Math.min(vfov, hfov) / 2) * 0.92;
+  controls.target.copy(ctr);
+  camera.position.copy(ctr).add(dir.multiplyScalar(dist));
+  camera.near = dist / 50; camera.far = dist * 20; camera.updateProjectionMatrix();
+  controls.update(); render();
+}
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-view]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  fit(b.dataset.view);
+}));
+$("#refToggle").addEventListener("click", e => { showRef = !showRef; e.currentTarget.setAttribute("aria-pressed", String(showRef)); buildModel(normalize(cfg)); });
+
+// ---------- boot ----------
+$("#priceDate").textContent = "JLCMC " + PRICE_DATE;
+renderBays(); fillForm(); initViewer(); update(true); refreshDl();
+requestAnimationFrame(() => { resize(); fit("iso"); });
+</script>
+</body>
+</html>
