@@ -29,3 +29,8 @@ python3 frame_bom.py                       # BoM files
 freecadcmd cad/workstation.py              # FreeCAD model, STEP and DXFs (FreeCAD 1.x)
 python3 web/build.py                       # docs/index.html after editing web/index.html
 ```
+
+## License
+
+[MIT](LICENSE) © 2026 Cristiano Strobbe. This covers the code and the design files (FreeCAD model, STEP, DXF and BoM).
+You may use, change, build and sell it. Keep the copyright notice, and please credit "Cristiano Strobbe" with a link to this repository.
