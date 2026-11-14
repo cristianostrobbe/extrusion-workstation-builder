@@ -1,8 +1,10 @@
-# Extrusion Workstation Builder
+# Workstation Builder
 
 A 3D-printer workstation built from 3030 aluminium extrusion: two printer towers, each sized for a Bambu Lab P1S with an AMS on top, with two storage shelves below, on leveling casters. Frame 930 × 420 × 1150 mm. No drilling or tapping of the aluminium; everything joins with die-cast corner brackets and drop-in T-nuts.
 
-**Configurator:** https://cristianostrobbe.github.io/extrusion-workstation-builder/
+**Workstation Builder (online, free):** https://cristianostrobbe.github.io/extrusion-workstation-builder/
+
+The page is in English and Italian (EN / IT switch in the header; `?lang=it` in the link opens it in Italian). Exported files stay in English, as JLCMC expects.
 
 The configurator lets you change the bays, heights, finish, casters, shelves and an optional acrylic enclosure, and checks that your printer fits. It produces:
 - a JLCMC order list (.xlsx in JLCMC's BOM / RFQ upload format, or .csv)

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>3D Printer Workstation Builder</title>
+<title>Workstation Builder</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -167,6 +167,11 @@ ul.plain li{margin:2px 0}
 textarea{width:100%;min-height:90px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line-strong);border-radius:4px;background:var(--raised);padding:8px;resize:vertical}
 details summary{cursor:pointer;color:var(--muted)}
 .title p.beta{color:var(--ink);font-size:13px}
+.namerow{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.lang{display:inline-flex;border:1px solid var(--line-strong);border-radius:4px;overflow:hidden}
+.lang button{border:0;background:var(--raised);padding:4px 10px;font:600 12px var(--f-mono);letter-spacing:.06em;cursor:pointer;color:var(--muted)}
+.lang button+button{border-left:1px solid var(--line)}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .title p.beta .pill{margin-right:6px;vertical-align:1px}
 .title p.beta a,.note a{color:var(--accent)}
 .fb{display:flex;flex-direction:column;gap:12px;max-width:760px}
@@ -181,8 +186,11 @@ details summary{cursor:pointer;color:var(--muted)}
 <div class="wrap">
   <header class="title">
     <div class="name">
-      <h1>3D Printer Workstation Builder</h1>
-      <p>Size a 3030 aluminium extrusion workstation bay by bay, check that your printer fits, and export the parts list in JLCMC's BOM upload format.</p>
+      <div class="namerow">
+        <h1>Workstation Builder</h1>
+        <div class="lang" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="it" aria-pressed="false">IT</button></div>
+      </div>
+      <p>Design an aluminium stand for your 3D printers, a shelf or a cabinet, one section at a time. See if your printer fits, what it costs, and get the parts list ready to order from JLCMC.</p>
       <p class="beta"><span class="pill warn">Beta</span> Prices, part numbers and fit checks aren't validated yet: check the order before you pay, and <a href="#feedback">tell me what looks wrong</a>.</p>
     </div>
     <dl>
@@ -385,6 +393,282 @@ details summary{cursor:pointer;color:var(--muted)}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
+// ---------- language: the page is written in English; Italian comes from IT, keyed by the English text ----------
+const LANGS = ["en", "it"];
+let LANG = "en";
+try {
+  const q = new URLSearchParams(location.search).get("lang"), saved = localStorage.getItem("ws-lang");
+  LANG = LANGS.includes(q) ? q : LANGS.includes(saved) ? saved
+    : (navigator.languages || [navigator.language || ""]).some(l => /^it\b/i.test(l)) ? "it" : "en";
+} catch (_) {}
+const IT = {
+"Design an aluminium stand for your 3D printers, a shelf or a cabinet, one section at a time. See if your printer fits, what it costs, and get the parts list ready to order from JLCMC.": "Progetta una struttura in alluminio per le tue stampanti 3D, una scaffalatura o un mobile, una sezione alla volta. Scopri se la stampante ci sta, quanto costa, e ottieni la lista dei pezzi pronta da ordinare su JLCMC.",
+"Prices, part numbers and fit checks aren't validated yet: check the order before you pay, and": "Prezzi, codici dei pezzi e verifiche d'ingombro non sono ancora validati: controlla l'ordine prima di pagare e",
+"tell me what looks wrong": "segnalami cosa non torna",
+"Profile": "Profilo",
+"3030 EU · 8 mm slot": "3030 EU · cava 8 mm",
+"Units": "Unità",
+"Joints": "Giunzioni",
+"TPEA brackets": "squadrette TPEA",
+"Prices": "Prezzi",
+"Language": "Lingua",
+"Bays": "Sezioni",
+"Each bay is the clear width between two posts. A tower bay rises to the full height and holds a printer on its deck.": "Ogni sezione è la luce libera tra due montanti. Una sezione a torre sale fino all'altezza piena e ospita una stampante sul suo piano.",
+"Add bay": "Aggiungi sezione",
+"Bay {n} clear width": "Luce della sezione {n}",
+"Remove bay {n}": "Rimuovi la sezione {n}",
+"Printer tower": "Torre per stampante",
+"Frame": "Telaio",
+"Depth": "Profondità",
+"outside, front to back": "esterna, da davanti a dietro",
+"Lower cabinet height": "Altezza del mobile basso",
+"post bottom to top of deck beam": "dal fondo del montante alla cima del traverso del piano",
+"Tower height": "Altezza della torre",
+"full post length": "lunghezza totale del montante",
+"Shelf levels": "Livelli di ripiano",
+"bottom, middle shelves and deck": "fondo, ripiani intermedi e piano",
+"Bottom beam height": "Altezza del traverso inferiore",
+"above the post end; 60 clears the caster clamps": "sopra l'estremità del montante; 60 lascia spazio agli attacchi delle ruote",
+"Profile finish": "Finitura dei profili",
+"Natural": "Naturale",
+"Black": "Nero",
+"White": "Bianco",
+"Feet": "Piedi",
+"Casters Ø40, M8, 50 kg": "Ruote Ø40, M8, 50 kg",
+"Casters Ø60, M12, 250 kg": "Ruote Ø60, M12, 250 kg",
+"No casters": "Senza ruote",
+"Shelves": "Ripiani",
+"Panel thickness": "Spessore del pannello",
+"plywood or MDF, bought locally": "compensato o MDF, comprato in zona",
+"Panel on top of each tower": "Pannello in cima a ogni torre",
+"holds the AMS or a filament dryer": "regge l'AMS o un essiccatore di filamento",
+"Enclosure": "Chiusura",
+"Clear acrylic, cut to size by JLCMC. You drill the holes yourself.": "Plexiglass trasparente, tagliato su misura da JLCMC. I fori li fai tu.",
+"Tower doors": "Ante delle torri",
+"Lower cabinet doors": "Ante del mobile basso",
+"Outer side panels, full height": "Pannelli laterali esterni, a tutta altezza",
+"Back panels, lower cabinet": "Pannelli posteriori, mobile basso",
+"Back panels, towers": "Pannelli posteriori, torri",
+"printers exhaust and purge out of the back": "le stampanti sfiatano e scaricano lo spurgo dal retro",
+"Door thickness": "Spessore delle ante",
+"Printer": "Stampante",
+"Model": "Modello",
+"Width": "Larghezza",
+"Height": "Altezza",
+"AMS 2 Pro on the tower top": "AMS 2 Pro in cima alla torre",
+"Custom size": "Misura personalizzata",
+"Order": "Ordine",
+"Spare small parts": "Minuteria di scorta",
+"rounded up to packs of 5": "arrotondata a confezioni da 5",
+"none": "nessuna",
+"Buy the profiles locally": "Compra i profili in zona",
+"order only hardware and acrylic from JLCMC": "ordina da JLCMC solo minuteria e plexiglass",
+"Buy the acrylic locally": "Compra il plexiglass in zona",
+"cut from the DXF files by a local shop": "tagliato dai file DXF da un negozio vicino",
+"Shipping": "Spedizione",
+"express rates to Italy, Nov 2026": "tariffe espresse verso l'Italia, nov 2026",
+"Use the shipping rate from your own JLCMC cart": "Usa la tariffa di spedizione del tuo carrello JLCMC",
+"Cart weight": "Peso del carrello",
+"Shipping cost": "Costo di spedizione",
+"Your own UPS, DHL or FedEx account": "Il tuo account UPS, DHL o FedEx",
+"FedEx Express or FedEx DDP": "FedEx Express o FedEx DDP",
+"DHL Express or DHL DDP": "DHL Express o DHL DDP",
+"3–5 business days": "3–5 giorni lavorativi",
+"3–6 business days": "3–6 giorni lavorativi",
+"2–4 business days": "2–4 giorni lavorativi",
+"billed by your courier": "fatturato dal tuo corriere",
+"own account": "account proprio",
+"Italy": "l'Italia",
+"The estimate uses {m} at €{eur} for a {kg} kg parcel to {dest} (a sample JLCMC cart, {date}). For another country or a newer price, enter the weight and shipping cost shown in your own JLCMC cart.": "La stima usa {m} a €{eur} per un pacco di {kg} kg verso {dest} (un carrello JLCMC di esempio, {date}). Per un altro paese o un prezzo più recente, inserisci il peso e il costo di spedizione del tuo carrello JLCMC.",
+"With your own courier account JLCMC charges a €1.79 handling fee and your courier bills you for the transport.": "Con il tuo account corriere JLCMC addebita €1,79 di gestione e il trasporto te lo fattura il corriere.",
+"Reset to twin P1S": "Ripristina: doppia P1S",
+"Reset to the twin-tower P1S design": "Ripristinato il progetto a due torri P1S",
+"Save or load this design": "Salva o carica questo progetto",
+"The design is remembered in this browser. To move it elsewhere, copy the text below, or paste a saved design and load it.": "Il progetto resta salvato in questo browser. Per spostarlo altrove, copia il testo qui sotto, oppure incolla un progetto salvato e caricalo.",
+"Design as JSON": "Progetto in JSON",
+"Copy design": "Copia progetto",
+"Load pasted design": "Carica progetto incollato",
+"Save as .json": "Salva come .json",
+"Preview and totals": "Anteprima e totali",
+"Camera": "Vista",
+"Front": "Fronte",
+"Side": "Lato",
+"Top": "Alto",
+"Drag to orbit · scroll to zoom · right-drag to pan": "Trascina per ruotare · scorri per lo zoom · tasto destro per spostare",
+"3D preview isn't available in this browser. The parts list below still works.": "L'anteprima 3D non è disponibile in questo browser. La lista dei pezzi qui sotto funziona comunque.",
+"The 3D preview needs three.js, which didn't load. The parts list below still works.": "L'anteprima 3D richiede three.js, che non si è caricato. La lista dei pezzi qui sotto funziona comunque.",
+"JLCMC parts": "Pezzi JLCMC",
+"profiles {v}": "profili {v}",
+"hardware {v}": "minuteria {v}",
+"acrylic & doors {v}": "plexiglass e ante {v}",
+"Shipping, est.": "Spedizione, stima",
+"{kg} kg parcel": "pacco da {kg} kg",
+" · your rate": " · tua tariffa",
+"Delivered": "Consegnato",
+"parts + shipping, before import VAT": "pezzi + spedizione, IVA d'importazione esclusa",
+" and courier bill": " e fattura del corriere",
+"Size, mm": "Misure, mm",
+"{h} tall with the AMS": "{h} di altezza con l'AMS",
+"width × depth × height": "larghezza × profondità × altezza",
+"Fits": "Ci sta",
+"Check": "Verifica",
+"Problem": "Problema",
+"Note": "Nota",
+"Save": "Risparmio",
+"A profile is outside JLCMC's 50–6000 mm cut range.": "Un profilo è fuori dal campo di taglio JLCMC (50–6000 mm).",
+"Acrylic {use} ({a} × {b}) is outside the 100–2440 × 100–1220 mm sheet range.": "Plexiglass {use} ({a} × {b}): fuori dal formato lastra 100–2440 × 100–1220 mm.",
+"{n} mm too wide": "{n} mm troppo larga",
+"{n} mm too deep": "{n} mm troppo profonda",
+"{n} mm too tall": "{n} mm troppo alta",
+"Printer does not fit bay {n}: {why}.": "La stampante non entra nella sezione {n}: {why}.",
+"Bay {n}: printer fits with {w} mm side and {h} mm head room. The lid can't open in place; slide it out to open.": "Sezione {n}: la stampante ci sta con {w} mm di margine laterale e {h} mm sopra. Il coperchio non si apre sul posto: estrai la stampante per aprirlo.",
+"Bay {n}: printer fits with {w} mm side and {h} mm head room.": "Sezione {n}: la stampante ci sta con {w} mm di margine laterale e {h} mm sopra.",
+"The AMS needs a panel on the tower top. Turn on “Panel on top of each tower”.": "L'AMS ha bisogno di un pannello in cima alla torre. Attiva “Pannello in cima a ogni torre”.",
+"The AMS 2 Pro is wider than a tower top. It will overhang the posts.": "L'AMS 2 Pro è più largo della cima della torre: sporgerà oltre i montanti.",
+"Closed tower backs block the printer's rear exhaust and purge chute. Leave a vent or keep them open.": "Il retro chiuso delle torri blocca lo sfiato posteriore e lo scarico dello spurgo. Lascia una presa d'aria o tienilo aperto.",
+"No tower bays. This builds a low cabinet only.": "Nessuna sezione a torre: viene solo un mobile basso.",
+"Shelf {label} has only {h} mm of clear height.": "Il ripiano {label} ha solo {h} mm di altezza libera.",
+"{posts} casters carry {cap} kg in total. Estimated load with printers and filament is about {load} kg.": "{posts} ruote reggono {cap} kg in totale. Il carico stimato con stampanti e filamento è circa {load} kg.",
+"Doors are overlay doors on the front face. Hinges go on the outer posts.": "Le ante sono in appoggio sulla faccia frontale. Le cerniere vanno sui montanti esterni.",
+"Profiles left out of the JLCMC order. Buy {n} pieces ({m} m) of 3030 locally, cut to the list below. Any EU 30-series profile with an 8 mm slot fits these brackets and T-nuts.": "Profili esclusi dall'ordine JLCMC. Compra in zona {n} pezzi ({m} m) di 3030, tagliati secondo la lista qui sotto. Va bene qualsiasi profilo EU serie 30 con cava da 8 mm per queste squadrette e questi dadi a T.",
+"The aluminium is {pct} % of the parcel. Without the profiles, shipping drops from about €{a} to €{b}. Buying the {m} m of profile locally saves money if it costs less than about €{budget} delivered.": "L'alluminio è il {pct} % del pacco. Senza i profili la spedizione scende da circa €{a} a €{b}. Comprare in zona i {m} m di profilo conviene se costano meno di circa €{budget} consegnati.",
+"Acrylic left out of the JLCMC order. Have the {n} sheets cut locally from the DXF files below.": "Plexiglass escluso dall'ordine JLCMC. Fai tagliare in zona le {n} lastre dai file DXF qui sotto.",
+"The acrylic adds about {kg} kg and €{eur} of shipping. Cutting it locally saves money if the {n} sheets cost less than about €{max} delivered.": "Il plexiglass aggiunge circa {kg} kg e €{eur} di spedizione. Farlo tagliare in zona conviene se le {n} lastre costano meno di circa €{max} consegnate.",
+"JLCMC order": "Ordine JLCMC",
+"Columns match JLCMC's BOM template. Upload the .xlsx under BOM / RFQ on jlcmc.com, or paste the part numbers into the cart one by one. Click a part number to copy it.": "Le colonne seguono il modello BOM di JLCMC. Carica il file .xlsx in BOM / RFQ su jlcmc.com, oppure incolla i codici nel carrello uno alla volta. Clicca un codice per copiarlo. Descrizioni e file restano in inglese, come li vuole JLCMC.",
+"Download .xlsx": "Scarica .xlsx",
+"Download .csv": "Scarica .csv",
+"Copy table": "Copia tabella",
+"Customer #": "Cod. cliente",
+"JLCMC part #": "Codice JLCMC",
+"Description": "Descrizione",
+"Qty": "Q.tà",
+"Unit": "Unitario",
+"Total": "Totale",
+"Remark": "Note",
+"Profiles, cut to length": "Profili, tagliati a misura",
+"Hardware": "Minuteria",
+"Copy part number": "Copia il codice",
+"Interpolated between JLCMC price points": "Interpolato tra i prezzi JLCMC",
+"Parts total, about {kg} kg": "Totale pezzi, circa {kg} kg",
+"excl. shipping and VAT": "spedizione e IVA escluse",
+"Profiles are left out of this order; buy them locally from the cut list. ": "I profili sono esclusi da questo ordine: comprali in zona seguendo la lista di taglio. ",
+"Acrylic sheets are left out; have them cut locally from the DXF files. ": "Le lastre di plexiglass sono escluse: falle tagliare in zona dai file DXF. ",
+"Unit prices from the jlcmc.com price API on {d}, at the quantity tier for the quantity shown.": "Prezzi unitari dall'API prezzi di jlcmc.com del {d}, alla fascia di quantità indicata.",
+" ≈ marks cut-to-length prices interpolated between sampled sizes; JLCMC's quote is final.": " ≈ indica prezzi di taglio a misura interpolati tra le misure campionate; vale il preventivo JLCMC.",
+" Shipping is scaled from the {m} price per kg of a sample cart to {dest}, so treat it as ±20 %; small parcels cost more per kg, and other countries differ.": " La spedizione è stimata dal prezzo al kg di {m} di un carrello di esempio verso {dest}: consideralo ±20 %; i pacchi piccoli costano di più al kg e gli altri paesi variano.",
+"CAD files": "File CAD",
+"The STEP model is an assembly of the 3030 profiles, floor panels and acrylic, in mm, with the post bottoms at caster height. Brackets and screws aren't modelled. The panel drawings are 1:1 DXF files, one per unique shape, sorted into doors, side panels and floor. Both come as .zip files.": "Il modello STEP è un assieme dei profili 3030, dei pannelli dei ripiani e del plexiglass, in mm, con il fondo dei montanti all'altezza delle ruote. Squadrette e viti non sono modellate. I disegni dei pannelli sono file DXF in scala 1:1, uno per forma, divisi in ante, pannelli laterali e ripiani. Entrambi arrivano in file .zip.",
+"Download STEP": "Scarica STEP",
+"Download panel DXFs": "Scarica i DXF dei pannelli",
+"Doors": "Ante",
+"Side panels": "Pannelli laterali",
+"Floor": "Ripiani",
+", {n} holes": ", {n} fori",
+"No floor panels.": "Nessun pannello di ripiano.",
+"None selected. Turn them on under Enclosure.": "Nessuno selezionato. Attivali in Chiusura.",
+"File": "File",
+"Material": "Materiale",
+"Used for": "Uso",
+"Cut list": "Lista di taglio",
+"Buy locally": "Da comprare in zona",
+"Clear space": "Spazi liberi",
+"Buy these locally.": "Da comprare in zona.",
+"{posts} posts, {beams} beams, {brackets} brackets. Total {m} m of 3030. No drilling or tapping of the aluminium.": "{posts} montanti, {beams} traversi, {brackets} squadrette. Totale {m} m di 3030. Nessun foro o filettatura sull'alluminio.",
+"{a} m² of {t} mm plywood, notched 1 mm around each post.": "{a} m² di compensato da {t} mm, con una tacca di 1 mm attorno a ogni montante.",
+"{n} countersunk M6×{l} screws hold the panels. Countersink the holes 90° to Ø12.5.": "{n} viti M6×{l} a testa svasata fissano i pannelli. Svasa i fori a 90° fino a Ø12,5.",
+"Magnetic catches: 2 small 10×3 mm magnets per door, in printed holders. JLCMC doesn't sell catches.": "Chiusure magnetiche: 2 magnetini 10×3 mm per anta, in supporti stampati. JLCMC non vende chiusure.",
+"Handle screws: check the thread in the handle's datasheet.": "Viti delle maniglie: controlla la filettatura nella scheda della maniglia.",
+"Tower, above the deck panel": "Torre, sopra il pannello del piano",
+"between {a} and {b}": "tra {a} e {b}",
+"Deck surface above floor": "Piano di lavoro da terra",
+"Tower top above floor": "Cima della torre da terra",
+"Top of the AMS above floor": "Cima dell'AMS da terra",
+"Brackets sit under every beam end and take about 35 mm of height within 35 mm of each post.": "Le squadrette stanno sotto ogni estremità dei traversi e occupano circa 35 mm d'altezza entro 35 mm da ogni montante.",
+"bottom": "fondo",
+"deck": "piano",
+"middle shelf": "ripiano intermedio",
+"shelf {n}": "ripiano {n}",
+"tower top": "cima della torre",
+"tower door": "anta della torre",
+"lower door": "anta del mobile basso",
+"lower back": "retro del mobile basso",
+"tower back": "retro della torre",
+"left side": "lato sinistro",
+"right side": "lato destro",
+"{label}, bay {n}": "{label}, sezione {n}",
+"bay {n} {label}": "sezione {n}, {label}",
+"hinges on the left": "cerniere a sinistra",
+"hinges on the right": "cerniere a destra",
+"{t} mm plywood": "compensato da {t} mm",
+"{t} mm clear acrylic": "plexiglass trasparente da {t} mm",
+"post": "montante",
+"posts": "montanti",
+"X beam": "traverso X",
+"X beams": "traversi X",
+"Y beam": "traverso Y",
+"Y beams": "traversi Y",
+"Downloads aren't available in this view. Use Copy table instead.": "In questa vista i download non sono disponibili. Usa Copia tabella.",
+"Downloads aren't available here. Use Copy table instead.": "Qui i download non sono disponibili. Usa Copia tabella.",
+"Getting the download ready. Try again in a moment.": "Preparo il download. Riprova tra un attimo.",
+"Saved {f}": "Salvato {f}",
+"Download cancelled": "Download annullato",
+"Couldn't save {f}. Use Copy table instead.": "Impossibile salvare {f}. Usa Copia tabella.",
+"The spreadsheet library didn't load. Use .csv instead.": "La libreria dei fogli di calcolo non si è caricata. Usa il .csv.",
+"The zip library didn't load. Reload the page and try again.": "La libreria zip non si è caricata. Ricarica la pagina e riprova.",
+"Press ⌘C / Ctrl+C to copy": "Premi ⌘C / Ctrl+C per copiare",
+"Copy failed. Select the text and copy it by hand.": "Copia non riuscita. Seleziona il testo e copialo a mano.",
+"Table copied. Paste it into a spreadsheet.": "Tabella copiata. Incollala in un foglio di calcolo.",
+"Copied {pn}": "Copiato {pn}",
+"Design copied": "Progetto copiato",
+"Design loaded": "Progetto caricato",
+"That text isn't a saved design. Paste the JSON from “Copy design”.": "Quel testo non è un progetto salvato. Incolla il JSON da “Copia progetto”.",
+"Feedback": "Segnalazioni",
+"This tool is in beta. If a price, a part number, a fit check or a file looks wrong, or you have an idea or a local supplier to suggest, tell me. Your current design goes with it, so I see exactly what you saw.": "Lo strumento è in beta. Se un prezzo, un codice, una verifica d'ingombro o un file non torna, o hai un'idea o un fornitore locale da suggerire, dimmelo. Il tuo progetto attuale viene allegato, così vedo esattamente quello che hai visto tu.",
+"About": "Argomento",
+"Wrong price": "Prezzo sbagliato",
+"Wrong or missing part": "Pezzo sbagliato o mancante",
+"Printer fit or dimensions": "Ingombro della stampante o misure",
+"STEP or DXF files": "File STEP o DXF",
+"Bug in the page": "Errore nella pagina",
+"Idea": "Idea",
+"Local supplier (Italy)": "Fornitore locale (Italia)",
+"What happened, or what should change": "Cosa è successo, o cosa andrebbe cambiato",
+"e.g. The M6 T-nut price differs from the JLCMC cart: $0.016, not $0.012.": "es. Il prezzo del dado a T M6 è diverso dal carrello JLCMC: $0.016, non $0.012.",
+"Contact": "Contatto",
+"optional: Instagram, email or GitHub name, if you want a reply": "facoltativo: Instagram, email o nome GitHub, se vuoi una risposta",
+"Attach my current design": "Allega il mio progetto attuale",
+"Two ways to send it:": "Due modi per inviarla:",
+"no account needed": "senza account",
+", copy it and paste it in a message to me on Instagram": ", copiala e incollala in un messaggio a me su Instagram",
+"; or, with a GitHub account, open it as an issue (pre-filled, nothing is sent until you submit it there).": "; oppure, con un account GitHub, aprila come issue (già compilata, non parte nulla finché non la invii lì).",
+"Copy for an Instagram DM": "Copia per un DM su Instagram",
+"Open Instagram": "Apri Instagram",
+"Open a GitHub issue": "Apri una issue su GitHub",
+"{n} bay ({list})": "{n} sezione ({list})",
+"{n} bays ({list})": "{n} sezioni ({list})",
+"tower": "torre",
+"{total} of JLCMC parts": "{total} di pezzi JLCMC",
+"Write a line about what you saw first.": "Scrivi prima una riga su cosa hai visto.",
+"Feedback copied. Paste it in a message to me.": "Segnalazione copiata. Incollala in un messaggio a me."
+};
+function T(s, v) {
+  let out = (LANG === "it" && IT[s]) || s;
+  if (v) out = out.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+  return out;
+}
+// Labels that compute() writes in English go into the exported files too, so they are translated only for display.
+function TL(s) {
+  if (LANG === "en") return s;
+  let m;
+  if ((m = /^(.*) → (.*)$/.exec(s))) return `${TL(m[1])} → ${TL(m[2])}`;
+  if ((m = /^bay (\d+) (.+)$/.exec(s))) return T("bay {n} {label}", { n: m[1], label: TL(m[2]) });
+  if ((m = /^(.+), bay (\d+)$/.exec(s))) return T("{label}, bay {n}", { label: TL(m[1]), n: m[2] });
+  if ((m = /^shelf (\d+)$/.exec(s))) return T("shelf {n}", { n: m[1] });
+  if ((m = /^(\d+) mm plywood$/.exec(s))) return T("{t} mm plywood", { t: m[1] });
+  if ((m = /^(\d+) mm clear acrylic$/.exec(s))) return T("{t} mm clear acrylic", { t: m[1] });
+  return T(s);
+}
 /*COMPUTE-START*/
 const P = 30, ENDCAP_H = 24, PRICE_DATE = "2026-11-09";
 
@@ -730,41 +1014,41 @@ function compute(cfg) {
   // checks
   const checks = [];
   const lens = members.map(m => m.len);
-  if (Math.min(...lens) < 50 || Math.max(...lens) > 6000) checks.push({ s: "bad", t: "A profile is outside JLCMC's 50–6000 mm cut range." });
-  for (const p of plexi) if (p.a > 2440 || p.b > 1220 || p.b < 100) { checks.push({ s: "bad", t: `Acrylic ${p.use} (${p.a} × ${p.b}) is outside the 100–2440 × 100–1220 mm sheet range.` }); break; }
+  if (Math.min(...lens) < 50 || Math.max(...lens) > 6000) checks.push({ s: "bad", t: T("A profile is outside JLCMC's 50–6000 mm cut range.") });
+  for (const p of plexi) if (p.a > 2440 || p.b > 1220 || p.b < 100) { checks.push({ s: "bad", t: T("Acrylic {use} ({a} × {b}) is outside the 100–2440 × 100–1220 mm sheet range.", { use: TL(p.use), a: p.a, b: p.b }) }); break; }
   const pr = cfg.printer;
   if (anyTower) {
     bays.forEach((b, i) => {
       if (!b.tower) return;
       const mw = b.w - pr.w, md = D - pr.d, mh = towerClear - pr.h;
       if (mw < 0 || md < 0 || mh < 0) {
-        const why = [mw < 0 && `${-mw} mm too wide`, md < 0 && `${-md} mm too deep`, mh < 0 && `${-mh} mm too tall`].filter(Boolean).join(", ");
-        checks.push({ s: "bad", t: `Printer does not fit bay ${i + 1}: ${why}.` });
-      } else if (mh < 30) checks.push({ s: "warn", t: `Bay ${i + 1}: printer fits with ${mw} mm side and ${mh} mm head room. The lid can't open in place; slide it out to open.` });
-      else checks.push({ s: "ok", t: `Bay ${i + 1}: printer fits with ${mw} mm side and ${mh} mm head room.` });
+        const why = [mw < 0 && T("{n} mm too wide", { n: -mw }), md < 0 && T("{n} mm too deep", { n: -md }), mh < 0 && T("{n} mm too tall", { n: -mh })].filter(Boolean).join(", ");
+        checks.push({ s: "bad", t: T("Printer does not fit bay {n}: {why}.", { n: i + 1, why }) });
+      } else if (mh < 30) checks.push({ s: "warn", t: T("Bay {n}: printer fits with {w} mm side and {h} mm head room. The lid can't open in place; slide it out to open.", { n: i + 1, w: mw, h: mh }) });
+      else checks.push({ s: "ok", t: T("Bay {n}: printer fits with {w} mm side and {h} mm head room.", { n: i + 1, w: mw, h: mh }) });
     });
-    if (cfg.printer.ams && !cfg.topPanels) checks.push({ s: "warn", t: "The AMS needs a panel on the tower top. Turn on “Panel on top of each tower”." });
-    if (amsOn && pr.d > 0 && AMS.w > Math.min(...bays.filter(b => b.tower).map(b => b.w + P))) checks.push({ s: "warn", t: "The AMS 2 Pro is wider than a tower top. It will overhang the posts." });
-    if (e.towerBacks) checks.push({ s: "warn", t: "Closed tower backs block the printer's rear exhaust and purge chute. Leave a vent or keep them open." });
-  } else checks.push({ s: "info", t: "No tower bays. This builds a low cabinet only." });
-  compartments.forEach(c => { if (c.h < 80) checks.push({ s: "warn", t: `Shelf ${c.label} has only ${c.h} mm of clear height.` }); });
+    if (cfg.printer.ams && !cfg.topPanels) checks.push({ s: "warn", t: T("The AMS needs a panel on the tower top. Turn on “Panel on top of each tower”.") });
+    if (amsOn && pr.d > 0 && AMS.w > Math.min(...bays.filter(b => b.tower).map(b => b.w + P))) checks.push({ s: "warn", t: T("The AMS 2 Pro is wider than a tower top. It will overhang the posts.") });
+    if (e.towerBacks) checks.push({ s: "warn", t: T("Closed tower backs block the printer's rear exhaust and purge chute. Leave a vent or keep them open.") });
+  } else checks.push({ s: "info", t: T("No tower bays. This builds a low cabinet only.") });
+  compartments.forEach(c => { if (c.h < 80) checks.push({ s: "warn", t: T("Shelf {label} has only {h} mm of clear height.", { label: TL(c.label), h: c.h }) }); });
   if (caster) {
     const cap = caster.kg * posts;
     const load = grams / 1000 + (cfg.ship.profilesLocal ? profileM * fin.gpm : 0) + woodKg + bays.filter(b => b.tower).length * 15 + 40;
-    checks.push({ s: load > cap * 0.6 ? "warn" : "ok", t: `${posts} casters carry ${cap} kg in total. Estimated load with printers and filament is about ${Math.round(load)} kg.` });
+    checks.push({ s: load > cap * 0.6 ? "warn" : "ok", t: T("{posts} casters carry {cap} kg in total. Estimated load with printers and filament is about {load} kg.", { posts, cap, load: Math.round(load) }) });
   }
-  if (e.sides && (e.towerDoors || e.lowerDoors)) checks.push({ s: "info", t: "Doors are overlay doors on the front face. Hinges go on the outer posts." });
+  if (e.sides && (e.towerDoors || e.lowerDoors)) checks.push({ s: "info", t: T("Doors are overlay doors on the front face. Hinges go on the outer posts.") });
   if (cfg.ship.profilesLocal) {
-    checks.push({ s: "info", t: `Profiles left out of the JLCMC order. Buy ${members.length} pieces (${profileM.toFixed(2)} m) of 3030 locally, cut to the list below. Any EU 30-series profile with an 8 mm slot fits these brackets and T-nuts.` });
+    checks.push({ s: "info", t: T("Profiles left out of the JLCMC order. Buy {n} pieces ({m} m) of 3030 locally, cut to the list below. Any EU 30-series profile with an 8 mm slot fits these brackets and T-nuts.", { n: members.length, m: profileM.toFixed(2) }) });
   } else if (sm.eur) {
     const save = shipEur - ship.hwOnlyEur, budget = save + profileUsd * EUR_PER_USD;
-    checks.push({ s: "save", t: `The aluminium is ${Math.round(100 * (shipKg - ship.hwKg) / shipKg)} % of the parcel. Without the profiles, shipping drops from about €${Math.round(shipEur)} to €${Math.round(ship.hwOnlyEur)}. Buying the ${profileM.toFixed(1)} m of profile locally saves money if it costs less than about €${Math.round(budget)} delivered.` });
+    checks.push({ s: "save", t: T("The aluminium is {pct} % of the parcel. Without the profiles, shipping drops from about €{a} to €{b}. Buying the {m} m of profile locally saves money if it costs less than about €{budget} delivered.", { pct: Math.round(100 * (shipKg - ship.hwKg) / shipKg), a: Math.round(shipEur), b: Math.round(ship.hwOnlyEur), m: profileM.toFixed(1), budget: Math.round(budget) }) });
   }
   if (cfg.ship.acrylicLocal && plexi.length) {
-    checks.push({ s: "info", t: `Acrylic left out of the JLCMC order. Have the ${plexi.length} sheets cut locally from the DXF files below.` });
+    checks.push({ s: "info", t: T("Acrylic left out of the JLCMC order. Have the {n} sheets cut locally from the DXF files below.", { n: plexi.length }) });
   } else if (acrRows.length && sm.eur) {
     const save = rate * acrKg;
-    checks.push({ s: "save", t: `The acrylic adds about ${acrKg.toFixed(0)} kg and €${Math.round(save)} of shipping. Cutting it locally saves money if the ${plexi.length} sheets cost less than about €${Math.round(save + acrUsd * EUR_PER_USD)} delivered.` });
+    checks.push({ s: "save", t: T("The acrylic adds about {kg} kg and €{eur} of shipping. Cutting it locally saves money if the {n} sheets cost less than about €{max} delivered.", { kg: acrKg.toFixed(0), eur: Math.round(save), n: plexi.length, max: Math.round(save + acrUsd * EUR_PER_USD) }) });
   }
 
   const cuts = new Map();
@@ -889,7 +1173,7 @@ function panelFiles(res, cfg) {
 
 function dxfReadme(files, cfg) {
   const L = [
-    "Panel drawings from 3D Printer Workstation Builder. Units: mm, 1:1.",
+    "Panel drawings from Workstation Builder. Units: mm, 1:1.",
     "",
     "floor/        Shelf, deck and tower-top panels, " + cfg.woodT + " mm plywood. Drawn from above, front edge at the bottom (y = 0).",
     "              CUT                 outline and through holes, Ø" + HOLE_D + " for M6",
@@ -1045,7 +1329,7 @@ function stepText(res, cfg) {
 
   return ["ISO-10303-21;", "HEADER;",
     "FILE_DESCRIPTION(('3D printer workstation, 3030 frame with panels'),'2;1');",
-    `FILE_NAME('workstation.step','${new Date().toISOString().slice(0, 19)}',(''),(''),'3D Printer Workstation Builder','','');`,
+    `FILE_NAME('workstation.step','${new Date().toISOString().slice(0, 19)}',(''),(''),'Workstation Builder','','');`,
     "FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));", "ENDSEC;", "DATA;", ...out, "ENDSEC;", "END-ISO-10303-21;"].join("\n") + "\n";
 }
 /*CAD-END*/
@@ -1067,18 +1351,22 @@ function setPath(o, path, v) { const ks = path.split("."); let a = o; ks.slice(0
 
 // ---------- form ----------
 const presetSel = $("#preset");
-for (const [k, p] of Object.entries(PRINTERS)) { const o = document.createElement("option"); o.value = k; o.textContent = p.label; presetSel.appendChild(o); }
-for (const [k, m] of Object.entries(SHIP_METHODS)) { const o = document.createElement("option"); o.value = k; o.textContent = `${m.label}, ${m.days}`; $("#shipMethod").appendChild(o); }
+function fillOptions() {
+  presetSel.textContent = ""; $("#shipMethod").textContent = "";
+  for (const [k, p] of Object.entries(PRINTERS)) { const o = document.createElement("option"); o.value = k; o.textContent = T(p.label); presetSel.appendChild(o); }
+  for (const [k, m] of Object.entries(SHIP_METHODS)) { const o = document.createElement("option"); o.value = k; o.textContent = `${T(m.label)}, ${T(m.days)}`; $("#shipMethod").appendChild(o); }
+}
+fillOptions();
 
 function renderBays() {
   const box = $("#bays"); box.textContent = "";
   cfg.bays.forEach((b, i) => {
     const row = document.createElement("div"); row.className = "bay";
     row.innerHTML = `<div class="tag" aria-hidden="true">${i + 1}</div>
-      <div class="unit" data-u="mm"><input type="number" id="bayw${i}" min="150" max="1500" step="1" value="${b.w}" aria-label="Bay ${i + 1} clear width"></div>
-      <button type="button" class="iconbtn" aria-label="Remove bay ${i + 1}" ${cfg.bays.length < 2 ? "disabled" : ""}>
+      <div class="unit" data-u="mm"><input type="number" id="bayw${i}" min="150" max="1500" step="1" value="${b.w}" aria-label="${T("Bay {n} clear width", { n: i + 1 })}"></div>
+      <button type="button" class="iconbtn" aria-label="${T("Remove bay {n}", { n: i + 1 })}" ${cfg.bays.length < 2 ? "disabled" : ""}>
         <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button>
-      <label class="check"><input type="checkbox" id="bayt${i}" ${b.tower ? "checked" : ""}><span>Printer tower</span></label>`;
+      <label class="check"><input type="checkbox" id="bayt${i}" ${b.tower ? "checked" : ""}><span>${T("Printer tower")}</span></label>`;
     const [wIn, rm, tIn] = [row.querySelector("input[type=number]"), row.querySelector("button"), row.querySelector("input[type=checkbox]")];
     wIn.addEventListener("input", () => { cfg.bays[i].w = Number(wIn.value); schedule(); });
     wIn.addEventListener("change", () => { commit(); });
@@ -1102,8 +1390,8 @@ function fillForm() {
   const sm = SHIP_METHODS[cfg.ship.method];
   $("#calKg").disabled = $("#calEur").disabled = !sm.eur;
   $("#calNote").textContent = sm.eur
-    ? `The estimate uses ${sm.short} at €${sm.eur.toFixed(2)} for a ${SHIP_CAL.kg} kg parcel to ${SHIP_CAL.dest} (a sample JLCMC cart, ${SHIP_CAL.date}). For another country or a newer price, enter the weight and shipping cost shown in your own JLCMC cart.`
-    : "With your own courier account JLCMC charges a €1.79 handling fee and your courier bills you for the transport.";
+    ? T("The estimate uses {m} at €{eur} for a {kg} kg parcel to {dest} (a sample JLCMC cart, {date}). For another country or a newer price, enter the weight and shipping cost shown in your own JLCMC cart.", { m: sm.short, eur: sm.eur.toFixed(2), kg: SHIP_CAL.kg, dest: T(SHIP_CAL.dest), date: SHIP_CAL.date })
+    : T("With your own courier account JLCMC charges a €1.79 handling fee and your courier bills you for the transport.");
   $("#cfgText").value = JSON.stringify(cfg, null, 1);
 }
 
@@ -1121,7 +1409,7 @@ document.querySelectorAll("[data-k]").forEach(el => {
   } else el.addEventListener("change", () => { read(); commit(); });
 });
 $("#addBay").addEventListener("click", () => { const last = cfg.bays[cfg.bays.length - 1]; cfg.bays.push({ w: last ? last.w : 420, tower: false }); commit(true); });
-$("#reset").addEventListener("click", () => { cfg = normalize(null); commit(true); toast("Reset to the twin-tower P1S design"); });
+$("#reset").addEventListener("click", () => { cfg = normalize(null); commit(true); toast(T("Reset to the twin-tower P1S design")); });
 $("#spec").addEventListener("submit", e => e.preventDefault());
 
 let timer = null;
@@ -1143,78 +1431,78 @@ function renderCad(live) {
   let body = "";
   for (const folder of ["doors", "side_panels", "floor"]) {
     const fs = files.filter(f => f.folder === folder);
-    body += `<tr class="group"><td colspan="4">${FOLDER_LABEL[folder]} <span class="rem" style="text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400">· ${folder}/</span></td></tr>`;
-    body += fs.length ? fs.map(f => `<tr><td class="mono">${esc(f.name.split("/")[1])}</td><td class="r num">${f.qty}</td><td>${esc(f.material)}${f.holes ? `, ${f.holes} holes` : ""}${f.note ? `, ${esc(f.note)}` : ""}</td><td><span class="rem">${esc(f.uses.join("; "))}</span></td></tr>`).join("")
-      : `<tr><td colspan="4"><span class="rem">${folder === "floor" ? "No floor panels." : "None selected. Turn them on under Enclosure."}</span></td></tr>`;
+    body += `<tr class="group"><td colspan="4">${T(FOLDER_LABEL[folder])} <span class="rem" style="text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400">· ${folder}/</span></td></tr>`;
+    body += fs.length ? fs.map(f => `<tr><td class="mono">${esc(f.name.split("/")[1])}</td><td class="r num">${f.qty}</td><td>${esc(TL(f.material))}${f.holes ? T(", {n} holes", { n: f.holes }) : ""}${f.note ? `, ${esc(TL(f.note))}` : ""}</td><td><span class="rem">${esc(f.uses.map(TL).join("; "))}</span></td></tr>`).join("")
+      : `<tr><td colspan="4"><span class="rem">${folder === "floor" ? T("No floor panels.") : T("None selected. Turn them on under Enclosure.")}</span></td></tr>`;
   }
-  $("#cadFiles").innerHTML = `<thead><tr><th>File</th><th class="r">Qty</th><th>Material</th><th>Used for</th></tr></thead><tbody>${body}</tbody>`;
+  $("#cadFiles").innerHTML = `<thead><tr><th>${T("File")}</th><th class="r">${T("Qty")}</th><th>${T("Material")}</th><th>${T("Used for")}</th></tr></thead><tbody>${body}</tbody>`;
 }
 
 function renderStats() {
   const d = res.dims;
   const s = res.sub, sh = res.ship;
   const parts = [];
-  if (s.profiles) parts.push(`profiles ${fmt$(s.profiles)}`);
-  parts.push(`hardware ${fmt$(s.hardware)}`);
-  if (s.enclosure) parts.push(`acrylic & doors ${fmt$(s.enclosure)}`);
+  if (s.profiles) parts.push(T("profiles {v}", { v: fmt$(s.profiles) }));
+  parts.push(T("hardware {v}", { v: fmt$(s.hardware) }));
+  if (s.enclosure) parts.push(T("acrylic & doors {v}", { v: fmt$(s.enclosure) }));
   const eur = v => "€" + Math.round(v);
   $("#stats").innerHTML = `
-    <div class="stat"><div class="k">JLCMC parts</div><div class="v">${fmt$(res.total)}</div><div class="s">≈ €${sh.partsEur.toFixed(2)} · ${parts.join(" · ")}</div></div>
-    <div class="stat"><div class="k">Shipping, est.</div><div class="v">${sh.method.flat != null ? "€" + sh.method.flat.toFixed(2) : "≈ " + eur(sh.eur)}</div><div class="s">${esc(sh.method.short)} · ${sh.kg.toFixed(1)} kg parcel${sh.calibrated ? " · your rate" : ""}</div></div>
-    <div class="stat total"><div class="k">Delivered</div><div class="v">≈ ${eur(sh.totalEur)}</div><div class="s">parts + shipping, before import VAT${res.ship.method.flat != null ? " and courier bill" : ""}</div></div>
-    <div class="stat"><div class="k">Size, mm</div><div class="v sm">${d.W} × ${d.D} × ${d.overallH}</div><div class="s">${d.withAms ? `${d.withAms} tall with the AMS` : "width × depth × height"}</div></div>`;
+    <div class="stat"><div class="k">${T("JLCMC parts")}</div><div class="v">${fmt$(res.total)}</div><div class="s">≈ €${sh.partsEur.toFixed(2)} · ${parts.join(" · ")}</div></div>
+    <div class="stat"><div class="k">${T("Shipping, est.")}</div><div class="v">${sh.method.flat != null ? "€" + sh.method.flat.toFixed(2) : "≈ " + eur(sh.eur)}</div><div class="s">${esc(T(sh.method.short))} · ${T("{kg} kg parcel", { kg: sh.kg.toFixed(1) })}${sh.calibrated ? T(" · your rate") : ""}</div></div>
+    <div class="stat total"><div class="k">${T("Delivered")}</div><div class="v">≈ ${eur(sh.totalEur)}</div><div class="s">${T("parts + shipping, before import VAT")}${res.ship.method.flat != null ? T(" and courier bill") : ""}</div></div>
+    <div class="stat"><div class="k">${T("Size, mm")}</div><div class="v sm">${d.W} × ${d.D} × ${d.overallH}</div><div class="s">${d.withAms ? T("{h} tall with the AMS", { h: d.withAms }) : T("width × depth × height")}</div></div>`;
   $("#dimtag").textContent = `${d.W} × ${d.D} × ${d.overallH} mm`;
 }
 
 function renderChecks() {
   const lab = { ok: "Fits", warn: "Check", bad: "Problem", info: "Note", save: "Save" };
-  $("#checks").innerHTML = res.checks.map(c => `<li><span class="pill ${c.s === "save" ? "ok" : c.s}">${lab[c.s]}</span><span>${esc(c.t)}</span></li>`).join("");
+  $("#checks").innerHTML = res.checks.map(c => `<li><span class="pill ${c.s === "save" ? "ok" : c.s}">${T(lab[c.s])}</span><span>${esc(c.t)}</span></li>`).join("");
 }
 
 function renderBom() {
-  const head = `<thead><tr><th>Customer #</th><th>JLCMC part #</th><th>Description</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Total</th><th>Remark</th></tr></thead>`;
+  const head = `<thead><tr><th>${T("Customer #")}</th><th>${T("JLCMC part #")}</th><th>${T("Description")}</th><th class="r">${T("Qty")}</th><th class="r">${T("Unit")}</th><th class="r">${T("Total")}</th><th>${T("Remark")}</th></tr></thead>`;
   let body = "", lastGroup = "";
   const groupOf = r => r.kind === "profile" ? "Profiles, cut to length" : r.section === "enclosure" || r.kind === "plexi" ? "Enclosure" : "Hardware";
   for (const r of res.rows) {
     const g = groupOf(r);
-    if (g !== lastGroup) { body += `<tr class="group"><td colspan="7">${g}</td></tr>`; lastGroup = g; }
-    body += `<tr><td class="mono">${r.cust}</td><td><button type="button" class="pnbtn" data-pn="${esc(r.pn)}" title="Copy part number">${esc(r.pn)}</button></td>
+    if (g !== lastGroup) { body += `<tr class="group"><td colspan="7">${T(g)}</td></tr>`; lastGroup = g; }
+    body += `<tr><td class="mono">${r.cust}</td><td><button type="button" class="pnbtn" data-pn="${esc(r.pn)}" title="${T("Copy part number")}">${esc(r.pn)}</button></td>
       <td>${esc(r.desc)}</td><td class="r num">${r.qty}</td>
-      <td class="r num">${r.unit.toFixed(4)}${r.exact ? "" : '<span class="est" title="Interpolated between JLCMC price points">≈</span>'}</td>
+      <td class="r num">${r.unit.toFixed(4)}${r.exact ? "" : `<span class="est" title="${T("Interpolated between JLCMC price points")}">≈</span>`}</td>
       <td class="r num">${r.total.toFixed(2)}</td><td><span class="rem">${esc(r.remark)}</span></td></tr>`;
   }
-  const foot = `<tfoot><tr><td colspan="3">Parts total, about ${(res.grams / 1000).toFixed(1)} kg</td><td class="r num">${res.rows.reduce((s, r) => s + r.qty, 0)}</td><td></td><td class="r num">${fmt$(res.total)}</td><td><span class="rem">excl. shipping and VAT</span></td></tr></tfoot>`;
+  const foot = `<tfoot><tr><td colspan="3">${T("Parts total, about {kg} kg", { kg: (res.grams / 1000).toFixed(1) })}</td><td class="r num">${res.rows.reduce((s, r) => s + r.qty, 0)}</td><td></td><td class="r num">${fmt$(res.total)}</td><td><span class="rem">${T("excl. shipping and VAT")}</span></td></tr></tfoot>`;
   $("#bom").innerHTML = head + "<tbody>" + body + "</tbody>" + foot;
   const est = res.rows.some(r => !r.exact);
   const sh = res.ship;
-  $("#bomNote").textContent = (cfg.ship.profilesLocal ? "Profiles are left out of this order; buy them locally from the cut list. " : "") +
-    (cfg.ship.acrylicLocal && res.plexi.length ? "Acrylic sheets are left out; have them cut locally from the DXF files. " : "") +
-    `Unit prices from the jlcmc.com price API on ${PRICE_DATE}, at the quantity tier for the quantity shown.` +
-    (est ? " ≈ marks cut-to-length prices interpolated between sampled sizes; JLCMC's quote is final." : "") +
-    (sh.method.eur ? ` Shipping is scaled from the ${sh.method.short} price per kg of a sample cart to ${SHIP_CAL.dest}, so treat it as ±20 %; small parcels cost more per kg, and other countries differ.` : "");
+  $("#bomNote").textContent = (cfg.ship.profilesLocal ? T("Profiles are left out of this order; buy them locally from the cut list. ") : "") +
+    (cfg.ship.acrylicLocal && res.plexi.length ? T("Acrylic sheets are left out; have them cut locally from the DXF files. ") : "") +
+    T("Unit prices from the jlcmc.com price API on {d}, at the quantity tier for the quantity shown.", { d: PRICE_DATE }) +
+    (est ? T(" ≈ marks cut-to-length prices interpolated between sampled sizes; JLCMC's quote is final.") : "") +
+    (sh.method.eur ? T(" Shipping is scaled from the {m} price per kg of a sample cart to {dest}, so treat it as ±20 %; small parcels cost more per kg, and other countries differ.", { m: sh.method.short, dest: T(SHIP_CAL.dest) }) : "");
 }
 
 function renderSide() {
-  $("#cutlist").innerHTML = `<table class="mini"><tbody>${res.cuts.map(c => `<tr><td class="num">${c.n} ×</td><td class="num">${c.len} mm</td><td><span class="rem">${[...c.roles.entries()].map(([r, q]) => `${q} ${r}${q > 1 ? "s" : ""}`).join(", ")}</span></td></tr>`).join("")}</tbody></table>
-    <p class="note">${cfg.ship.profilesLocal ? "<strong>Buy these locally.</strong> " : ""}${res.posts} posts, ${res.beams} beams, ${res.brackets} brackets. Total ${(res.cuts.reduce((s, c) => s + c.n * c.len, 0) / 1000).toFixed(2)} m of 3030. No drilling or tapping of the aluminium.</p>`;
+  $("#cutlist").innerHTML = `<table class="mini"><tbody>${res.cuts.map(c => `<tr><td class="num">${c.n} ×</td><td class="num">${c.len} mm</td><td><span class="rem">${[...c.roles.entries()].map(([r, q]) => `${q} ${T(q > 1 ? r + "s" : r)}`).join(", ")}</span></td></tr>`).join("")}</tbody></table>
+    <p class="note">${cfg.ship.profilesLocal ? `<strong>${T("Buy these locally.")}</strong> ` : ""}${T("{posts} posts, {beams} beams, {brackets} brackets. Total {m} m of 3030. No drilling or tapping of the aluminium.", { posts: res.posts, beams: res.beams, brackets: res.brackets, m: (res.cuts.reduce((s, c) => s + c.n * c.len, 0) / 1000).toFixed(2) })}</p>`;
   const g = new Map();
   for (const p of res.panels) { const k = `${p.w} × ${p.d}`; const v = g.get(k) || { n: 0, uses: new Set() }; v.n++; v.uses.add(p.label); g.set(k, v); }
   const area = res.panels.reduce((s, p) => s + p.w * p.d, 0) / 1e6;
-  $("#local").innerHTML = `<table class="mini"><tbody>${[...g.entries()].map(([k, v]) => `<tr><td class="num">${v.n} ×</td><td class="num">${k} × ${cfg.woodT} mm</td><td><span class="rem">${[...v.uses].join(", ")}</span></td></tr>`).join("")}</tbody></table>
+  $("#local").innerHTML = `<table class="mini"><tbody>${[...g.entries()].map(([k, v]) => `<tr><td class="num">${v.n} ×</td><td class="num">${k} × ${cfg.woodT} mm</td><td><span class="rem">${[...v.uses].map(TL).join(", ")}</span></td></tr>`).join("")}</tbody></table>
     <ul class="plain">
-      <li>${area.toFixed(2)} m² of ${cfg.woodT} mm plywood, notched 1 mm around each post.</li>
-      <li>${res.shelfScrews} countersunk M6×${res.woodScrewL} screws hold the panels. Countersink the holes 90° to Ø12.5.</li>
-      ${res.plexi.some(p => p.door) ? "<li>Magnetic catches: 2 small 10×3 mm magnets per door, in printed holders. JLCMC doesn't sell catches.</li><li>Handle screws: check the thread in the handle's datasheet.</li>" : ""}
+      <li>${T("{a} m² of {t} mm plywood, notched 1 mm around each post.", { a: area.toFixed(2), t: cfg.woodT })}</li>
+      <li>${T("{n} countersunk M6×{l} screws hold the panels. Countersink the holes 90° to Ø12.5.", { n: res.shelfScrews, l: res.woodScrewL })}</li>
+      ${res.plexi.some(p => p.door) ? `<li>${T("Magnetic catches: 2 small 10×3 mm magnets per door, in printed holders. JLCMC doesn't sell catches.")}</li><li>${T("Handle screws: check the thread in the handle's datasheet.")}</li>` : ""}
     </ul>`;
   const d = res.dims;
   $("#clear").innerHTML = `<table class="mini"><tbody>
-      ${res.geo.anyTower ? `<tr><td>Tower, above the deck panel</td><td class="r num">${d.towerClear} mm</td></tr>` : ""}
-      ${d.compartments.slice().reverse().map(c => `<tr><td>${esc(c.label.replace(/^(.*) → (.*)$/, "between $1 and $2"))}</td><td class="r num">${c.h} mm</td></tr>`).join("")}
-      <tr><td>Deck surface above floor</td><td class="r num">${d.deckTop} mm</td></tr>
-      ${res.geo.anyTower && cfg.topPanels ? `<tr><td>Tower top above floor</td><td class="r num">${d.topSurface} mm</td></tr>` : ""}
-      ${d.withAms ? `<tr><td>Top of the AMS above floor</td><td class="r num">${d.withAms} mm</td></tr>` : ""}
+      ${res.geo.anyTower ? `<tr><td>${T("Tower, above the deck panel")}</td><td class="r num">${d.towerClear} mm</td></tr>` : ""}
+      ${d.compartments.slice().reverse().map(c => `<tr><td>${esc(c.label.replace(/^(.*) → (.*)$/, (_, a, b) => T("between {a} and {b}", { a: TL(a), b: TL(b) })))}</td><td class="r num">${c.h} mm</td></tr>`).join("")}
+      <tr><td>${T("Deck surface above floor")}</td><td class="r num">${d.deckTop} mm</td></tr>
+      ${res.geo.anyTower && cfg.topPanels ? `<tr><td>${T("Tower top above floor")}</td><td class="r num">${d.topSurface} mm</td></tr>` : ""}
+      ${d.withAms ? `<tr><td>${T("Top of the AMS above floor")}</td><td class="r num">${d.withAms} mm</td></tr>` : ""}
     </tbody></table>
-    <p class="note">Brackets sit under every beam end and take about 35 mm of height within 35 mm of each post.</p>`;
+    <p class="note">${T("Brackets sit under every beam end and take about 35 mm of height within 35 mm of each post.")}</p>`;
 }
 
 // ---------- exports ----------
@@ -1243,13 +1531,13 @@ const inClaude = !!(window.claude && typeof window.claude.use === "function");
 if (inClaude) window.claude.use("downloads").then(ns => { downloadsNs = ns; downloadsChecked = true; refreshDl(); }).catch(() => { downloadsChecked = true; refreshDl(); });
 function refreshDl() {
   const off = inClaude && downloadsChecked && !downloadsNs;
-  for (const id of ["dlXlsx", "dlCsv", "cfgSave", "dlStep", "dlDxf"]) { const b = $("#" + id); b.disabled = off; b.title = off ? "Downloads aren't available in this view. Use Copy table instead." : ""; }
+  for (const id of ["dlXlsx", "dlCsv", "cfgSave", "dlStep", "dlDxf"]) { const b = $("#" + id); b.disabled = off; b.title = off ? T("Downloads aren't available in this view. Use Copy table instead.") : ""; }
 }
 async function offerFile(filename, data) {
   if (inClaude) {
-    if (!downloadsNs) { toast(downloadsChecked ? "Downloads aren't available here. Use Copy table instead." : "Getting the download ready. Try again in a moment."); return; }
-    try { await downloadsNs.save({ filename, data }); toast(`Saved ${filename}`); }
-    catch (e) { toast(e && e.code === "declined" ? "Download cancelled" : `Couldn't save ${filename}. Use Copy table instead.`); }
+    if (!downloadsNs) { toast(downloadsChecked ? T("Downloads aren't available here. Use Copy table instead.") : T("Getting the download ready. Try again in a moment.")); return; }
+    try { await downloadsNs.save({ filename, data }); toast(T("Saved {f}", { f: filename })); }
+    catch (e) { toast(e && e.code === "declined" ? T("Download cancelled") : T("Couldn't save {f}. Use Copy table instead.", { f: filename })); }
     return;
   }
   const blob = data instanceof Blob ? data : new Blob([data], { type: "text/plain" });
@@ -1258,20 +1546,20 @@ async function offerFile(filename, data) {
 }
 const stamp = () => { const d = res.dims; return `workstation_${cfg.bays.length}bay_${d.W}x${d.D}x${d.overallH}`; };
 $("#dlXlsx").addEventListener("click", async () => {
-  if (!window.JSZip) { toast("The spreadsheet library didn't load. Use .csv instead."); return; }
+  if (!window.JSZip) { toast(T("The spreadsheet library didn't load. Use .csv instead.")); return; }
   offerFile(`jlcmc_bom_${stamp()}.xlsx`, await xlsxBlob());
 });
 $("#dlCsv").addEventListener("click", () => offerFile(`jlcmc_bom_${stamp()}.csv`, csvText()));
 $("#cfgSave").addEventListener("click", () => offerFile(`${stamp()}.json`, JSON.stringify(cfg, null, 2)));
 // .step and .dxf aren't on the viewer's download allowlist, so both ship inside a .zip
 $("#dlStep").addEventListener("click", async () => {
-  if (!window.JSZip) { toast("The zip library didn't load. Reload the page and try again."); return; }
+  if (!window.JSZip) { toast(T("The zip library didn't load. Reload the page and try again.")); return; }
   const live = normalize(cfg), z = new JSZip();
   z.file(`${stamp()}.step`, stepText(compute(live), live));
   offerFile(`${stamp()}_step.zip`, await z.generateAsync({ type: "blob", compression: "DEFLATE" }));
 });
 $("#dlDxf").addEventListener("click", async () => {
-  if (!window.JSZip) { toast("The zip library didn't load. Reload the page and try again."); return; }
+  if (!window.JSZip) { toast(T("The zip library didn't load. Reload the page and try again.")); return; }
   const live = normalize(cfg), r = compute(live), files = panelFiles(r, live), z = new JSZip();
   for (const f of files) z.file(f.name, f.text);
   z.file("README.txt", dxfReadme(files, live));
@@ -1280,15 +1568,15 @@ $("#dlDxf").addEventListener("click", async () => {
 
 function copyText(text, okMsg, fallbackEl) {
   const done = () => toast(okMsg);
-  const fail = () => { if (fallbackEl) { fallbackEl.focus(); fallbackEl.select(); toast("Press ⌘C / Ctrl+C to copy"); } else toast("Copy failed. Select the text and copy it by hand."); };
+  const fail = () => { if (fallbackEl) { fallbackEl.focus(); fallbackEl.select(); toast(T("Press ⌘C / Ctrl+C to copy")); } else toast(T("Copy failed. Select the text and copy it by hand.")); };
   try { navigator.clipboard.writeText(text).then(done, fail); } catch (_) { fail(); }
 }
-$("#copyTsv").addEventListener("click", () => copyText([HEADER, ...exportRows()].map(r => r.join("\t")).join("\n"), "Table copied. Paste it into a spreadsheet."));
-$("#bom").addEventListener("click", e => { const b = e.target.closest(".pnbtn"); if (b) copyText(b.dataset.pn, `Copied ${b.dataset.pn}`); });
-$("#cfgCopy").addEventListener("click", () => copyText($("#cfgText").value, "Design copied", $("#cfgText")));
+$("#copyTsv").addEventListener("click", () => copyText([HEADER, ...exportRows()].map(r => r.join("\t")).join("\n"), T("Table copied. Paste it into a spreadsheet.")));
+$("#bom").addEventListener("click", e => { const b = e.target.closest(".pnbtn"); if (b) copyText(b.dataset.pn, T("Copied {pn}", { pn: b.dataset.pn })); });
+$("#cfgCopy").addEventListener("click", () => copyText($("#cfgText").value, T("Design copied"), $("#cfgText")));
 $("#cfgLoad").addEventListener("click", () => {
-  try { cfg = normalize(JSON.parse($("#cfgText").value)); commit(true); toast("Design loaded"); }
-  catch (_) { toast("That text isn't a saved design. Paste the JSON from “Copy design”."); }
+  try { cfg = normalize(JSON.parse($("#cfgText").value)); commit(true); toast(T("Design loaded")); }
+  catch (_) { toast(T("That text isn't a saved design. Paste the JSON from “Copy design”.")); }
 });
 
 // ---------- feedback: a pre-filled GitHub issue, or text to paste in a DM ----------
@@ -1301,8 +1589,8 @@ if (IG) {
 }
 function fbSummary() {
   const d = res.dims, live = normalize(cfg);
-  return `${live.bays.length} bay${live.bays.length > 1 ? "s" : ""} (${live.bays.map(b => b.w + (b.tower ? " tower" : "")).join(", ")}), ` +
-    `${d.W} × ${d.D} × ${d.overallH} mm, ${FINISHES[live.finish].label.toLowerCase()}, ${fmt$(res.total)} of JLCMC parts`;
+  return T(live.bays.length > 1 ? "{n} bays ({list})" : "{n} bay ({list})", { n: live.bays.length, list: live.bays.map(b => b.w + (b.tower ? " " + T("tower") : "")).join(", ") }) +
+    `, ${d.W} × ${d.D} × ${d.overallH} mm, ${T(FINISHES[live.finish].label).toLowerCase()}, ${T("{total} of JLCMC parts", { total: fmt$(res.total) })}`;
 }
 function fbBody() {
   const parts = [`### About\n${$("#fbTopic").value}`, `### What happened, or what should change\n${$("#fbMsg").value.trim()}`];
@@ -1320,14 +1608,14 @@ $("#fbDesign").addEventListener("change", () => { $("#fbSummary").textContent = 
 $("#feedback").addEventListener("focusin", () => { $("#fbSummary").textContent = fbSummary(); });
 $("#fbForm").addEventListener("submit", e => {
   e.preventDefault();
-  if (!$("#fbMsg").value.trim()) { $("#fbMsg").focus(); toast("Write a line about what you saw first."); return; }
+  if (!$("#fbMsg").value.trim()) { $("#fbMsg").focus(); toast(T("Write a line about what you saw first.")); return; }
   const url = `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(fbTitle())}&body=${encodeURIComponent(fbBody())}`;
   const w = window.open(url, "_blank", "noopener");
   if (!w) location.href = url;
 });
 $("#fbCopy").addEventListener("click", () => {
-  if (!$("#fbMsg").value.trim()) { $("#fbMsg").focus(); toast("Write a line about what you saw first."); return; }
-  copyText(`${fbTitle()}\n\n${fbBody()}`, "Feedback copied. Paste it in a message to me.", $("#fbMsg"));
+  if (!$("#fbMsg").value.trim()) { $("#fbMsg").focus(); toast(T("Write a line about what you saw first.")); return; }
+  copyText(`${fbTitle()}\n\n${fbBody()}`, T("Feedback copied. Paste it in a message to me."), $("#fbMsg"));
 });
 $("#fbSummary").textContent = fbSummary();
 
@@ -1473,9 +1761,36 @@ document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click"
 }));
 $("#refToggle").addEventListener("click", e => { showRef = !showRef; e.currentTarget.setAttribute("aria-pressed", String(showRef)); buildModel(normalize(cfg)); });
 
+// ---------- language switch: static text keeps its English original, rendered parts are redrawn ----------
+const DYNAMIC = "#stats,#checks,#bom,#bomNote,#cadFiles,#cutlist,#local,#clear,#bays,#calNote,#cfgText,#fbSummary,#dimtag,#preset,#shipMethod,#fbDm,#priceDate,.lang,script,style";
+const enText = new WeakMap(), enAttr = new WeakMap();
+function translateStatic() {
+  document.documentElement.lang = LANG;
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; (n = walk.nextNode());) {
+    if (!n.parentElement || n.parentElement.closest(DYNAMIC)) continue;
+    if (!enText.has(n)) enText.set(n, n.nodeValue);
+    const en = enText.get(n), key = en.replace(/\s+/g, " ").trim();
+    if (key) n.nodeValue = en.match(/^\s*/)[0] + T(key) + en.match(/\s*$/)[0];
+  }
+  document.querySelectorAll("[placeholder],[aria-label],[title]").forEach(el => {
+    if (el.closest(DYNAMIC)) return;
+    if (!enAttr.has(el)) enAttr.set(el, Object.fromEntries(["placeholder", "aria-label", "title"].filter(a => el.hasAttribute(a)).map(a => [a, el.getAttribute(a)])));
+    for (const [a, v] of Object.entries(enAttr.get(el))) if (v) el.setAttribute(a, T(v));
+  });
+  document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === LANG)));
+}
+document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => {
+  if (b.dataset.lang === LANG) return;
+  LANG = b.dataset.lang;
+  try { localStorage.setItem("ws-lang", LANG); } catch (_) {}
+  fillOptions(); renderBays(); fillForm(); translateStatic(); update(true); refreshDl();
+  $("#fbSummary").textContent = fbSummary();
+}));
+
 // ---------- boot ----------
 $("#priceDate").textContent = "JLCMC " + PRICE_DATE;
-renderBays(); fillForm(); initViewer(); update(true); refreshDl();
+renderBays(); fillForm(); initViewer(); translateStatic(); update(true); refreshDl();
 requestAnimationFrame(() => { resize(); fit("iso"); });
 </script>
 </body>
