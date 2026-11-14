@@ -161,6 +161,14 @@ ul.plain li{margin:2px 0}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:4px;font-size:13px;z-index:20;max-width:calc(100% - 32px)}
 textarea{width:100%;min-height:90px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line-strong);border-radius:4px;background:var(--raised);padding:8px;resize:vertical}
 details summary{cursor:pointer;color:var(--muted)}
+.title p.beta{color:var(--ink);font-size:13px}
+.title p.beta .pill{margin-right:6px;vertical-align:1px}
+.title p.beta a,.note a{color:var(--accent)}
+.fb{display:flex;flex-direction:column;gap:12px;max-width:760px}
+.fbrow{display:flex;flex-direction:column;gap:5px}
+.fbrow label{font-weight:500}
+.fbrow input{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-radius:4px;background:var(--raised)}
+.fb textarea{font-family:var(--f-body);font-size:14px;min-height:110px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -169,6 +177,7 @@ details summary{cursor:pointer;color:var(--muted)}
     <div class="name">
       <h1>3D Printer Workstation Builder</h1>
       <p>Size a 3030 aluminium extrusion workstation bay by bay, check that your printer fits, and export the parts list in JLCMC's BOM upload format.</p>
+      <p class="beta"><span class="pill warn">Beta</span> Prices, part numbers and fit checks aren't validated yet: check the order before you pay, and <a href="#feedback">tell me what looks wrong</a>.</p>
     </div>
     <dl>
       <div><dt>Profile</dt><dd>3030 EU · 8 mm slot</dd></div>
@@ -325,6 +334,43 @@ details summary{cursor:pointer;color:var(--muted)}
     <div class="panel"><h3>Cut list</h3><div id="cutlist"></div></div>
     <div class="panel"><h3>Buy locally</h3><div id="local"></div></div>
     <div class="panel"><h3>Clear space</h3><div id="clear"></div></div>
+  </section>
+
+  <section class="panel" id="feedback" aria-labelledby="fbTitle">
+    <div class="panelhead">
+      <div>
+        <h2 id="fbTitle">Feedback</h2>
+        <p>This tool is in beta. If a price, a part number, a fit check or a file looks wrong, or you have an idea or a local supplier to suggest, tell me. Your current design goes with it, so I see exactly what you saw.</p>
+      </div>
+    </div>
+    <form class="fb" id="fbForm" autocomplete="off">
+      <div class="fbrow">
+        <label for="fbTopic">About</label>
+        <select id="fbTopic">
+          <option>Wrong price</option>
+          <option>Wrong or missing part</option>
+          <option>Printer fit or dimensions</option>
+          <option>STEP or DXF files</option>
+          <option>Bug in the page</option>
+          <option>Idea</option>
+          <option>Local supplier (Italy)</option>
+        </select>
+      </div>
+      <div class="fbrow">
+        <label for="fbMsg">What happened, or what should change</label>
+        <textarea id="fbMsg" required placeholder="e.g. The M6 T-nut price differs from the JLCMC cart: $0.016, not $0.012."></textarea>
+      </div>
+      <div class="fbrow">
+        <label for="fbContact">Contact <small class="hint">optional: Instagram, email or GitHub name, if you want a reply</small></label>
+        <input id="fbContact" type="text" maxlength="120">
+      </div>
+      <label class="check"><input type="checkbox" id="fbDesign" checked><span>Attach my current design<small class="hint" id="fbSummary"></small></span></label>
+      <div class="btnrow">
+        <button type="submit" class="btn primary">Open a GitHub issue</button>
+        <button type="button" class="btn" id="fbCopy">Copy feedback</button>
+      </div>
+      <p class="note">A GitHub issue needs a free GitHub account; it opens pre-filled in a new tab, and nothing is sent until you submit it there. No account? Copy the feedback and send it to me<span id="fbDm"></span>.</p>
+    </form>
   </section>
 </div>
 
@@ -1237,6 +1283,42 @@ $("#cfgLoad").addEventListener("click", () => {
   try { cfg = normalize(JSON.parse($("#cfgText").value)); commit(true); toast("Design loaded"); }
   catch (_) { toast("That text isn't a saved design. Paste the JSON from “Copy design”."); }
 });
+
+// ---------- feedback: a pre-filled GitHub issue, or text to paste in a DM ----------
+const REPO = "cristianostrobbe/extrusion-workstation-builder";
+const DM = "";   // e.g. "@yourhandle on Instagram"; shown in the note when set
+if (DM) $("#fbDm").textContent = " (" + DM + ")";
+function fbSummary() {
+  const d = res.dims, live = normalize(cfg);
+  return `${live.bays.length} bay${live.bays.length > 1 ? "s" : ""} (${live.bays.map(b => b.w + (b.tower ? " tower" : "")).join(", ")}), ` +
+    `${d.W} × ${d.D} × ${d.overallH} mm, ${FINISHES[live.finish].label.toLowerCase()}, ${fmt$(res.total)} of JLCMC parts`;
+}
+function fbBody() {
+  const parts = [`### About\n${$("#fbTopic").value}`, `### What happened, or what should change\n${$("#fbMsg").value.trim()}`];
+  const who = $("#fbContact").value.trim();
+  if (who) parts.push(`### Contact\n${who}`);
+  if ($("#fbDesign").checked) parts.push(`### Design\n${fbSummary()}\n\n<details><summary>Design JSON (paste it into “Save or load this design”)</summary>\n\n\`\`\`json\n${JSON.stringify(normalize(cfg))}\n\`\`\`\n</details>`);
+  parts.push(`---\nPrices of ${PRICE_DATE} · ${navigator.userAgent.replace(/\s+/g, " ").slice(0, 160)}`);
+  return parts.join("\n\n");
+}
+function fbTitle() {
+  const msg = $("#fbMsg").value.trim().replace(/\s+/g, " ");
+  return `[Feedback] ${$("#fbTopic").value}: ${msg.length > 60 ? msg.slice(0, 57) + "…" : msg}`;
+}
+$("#fbDesign").addEventListener("change", () => { $("#fbSummary").textContent = fbSummary(); });
+$("#feedback").addEventListener("focusin", () => { $("#fbSummary").textContent = fbSummary(); });
+$("#fbForm").addEventListener("submit", e => {
+  e.preventDefault();
+  if (!$("#fbMsg").value.trim()) { $("#fbMsg").focus(); toast("Write a line about what you saw first."); return; }
+  const url = `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(fbTitle())}&body=${encodeURIComponent(fbBody())}`;
+  const w = window.open(url, "_blank", "noopener");
+  if (!w) location.href = url;
+});
+$("#fbCopy").addEventListener("click", () => {
+  if (!$("#fbMsg").value.trim()) { $("#fbMsg").focus(); toast("Write a line about what you saw first."); return; }
+  copyText(`${fbTitle()}\n\n${fbBody()}`, "Feedback copied. Paste it in a message to me.", $("#fbMsg"));
+});
+$("#fbSummary").textContent = fbSummary();
 
 let toastTimer;
 function toast(msg) {
